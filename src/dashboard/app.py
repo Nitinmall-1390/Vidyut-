@@ -77,8 +77,15 @@ def fetch_demand(feeder_id: str, horizon: int):
         r = httpx.post(f"{API_URL}/demand/forecast",
                        json={"feeder_id": feeder_id, "horizon_hours": horizon, "granularity_minutes": 15},
                        timeout=120.0)
-        r.raise_for_status(); return r.json()
-    except: return None
+        if r.status_code == 200:
+            return r.json(), None
+        else:
+            return None, f"API Error {r.status_code}: {r.text}"
+    except httpx.TimeoutException:
+        return None, "API Timeout (120s limit reached)"
+    except Exception as e:
+        return None, f"Connection Error: {str(e)}"
+
 
 def fetch_theft_score(consumer_id, features):
     try:
@@ -183,7 +190,7 @@ if page == "DEMAND ANALYTICS":
 
     if run_btn:
         with st.spinner("Querying NASA Weather API and Historical Load Data..."):
-            data = fetch_demand(feeder_id, horizon)
+            data, error_msg = fetch_demand(feeder_id, horizon)
         if data:
             s = data["summary"]
             m1, m2, m3, m4, m5 = st.columns(5)
@@ -247,7 +254,9 @@ if page == "DEMAND ANALYTICS":
             peak_time = df.loc[peak_idx, "timestamp"].strftime("%H:%M")
             st.info(f"Peak demand of **{s['max_kw']:.1f} kW** forecast at **{peak_time}**. Load factor: **{(s['mean_kw']/s['max_kw']*100):.1f}%**. Recommended: Pre-position reactive power compensation at Zone B substation.")
         else:
-            st.error("API Timeout — Could not retrieve forecast. Verify feeder ID exists in the registry.")
+            st.error(f"Forecast Failed: {error_msg or 'Unknown Error'}")
+            if "registry" in str(error_msg).lower():
+                st.info("💡 Tip: Ensure the Feeder ID matches a trained model in the registry.")
 
 # ══════════════════════════════════════════════════════════════════════════
 # PAGE 2: THEFT GUARD
