@@ -385,104 +385,104 @@ if page == "DEMAND ANALYTICS":
         st.info(f"Peak demand of **{summary['max_kw']:.1f} kW** forecast at **{peak_time}**. Load factor: **{lf:.1f}%**.")
 
 
-# ── Feature Explanation (always visible on Demand Analytics page) ──────────
-with st.expander("📖 HOW IT WORKS — Feature Reference", expanded=False):
-    st.markdown(
-        "<p style='color:#7B8FAB;font-size:13px;margin-bottom:16px;'>"
-        "Vidyut's ensemble (Prophet 40% + LightGBM 60%) uses <b>48 engineered features</b> "
-        "in 4 categories: Calendar, Lag/Rolling, Weather, and Architecture.</p>",
-        unsafe_allow_html=True,
-    )
-    tab1, tab2, tab3, tab4 = st.tabs(
-        ["📅 Calendar", "📈 Lag & Rolling", "🌡️ Weather", "🤖 Architecture"]
-    )
+    # ── Feature Explanation (always visible on Demand Analytics page) ──────────
+    with st.expander("📖 HOW IT WORKS — Feature Reference", expanded=False):
+        st.markdown(
+            "<p style='color:#7B8FAB;font-size:13px;margin-bottom:16px;'>"
+            "Vidyut's ensemble (Prophet 40% + LightGBM 60%) uses <b>48 engineered features</b> "
+            "in 4 categories: Calendar, Lag/Rolling, Weather, and Architecture.</p>",
+            unsafe_allow_html=True,
+        )
+        tab1, tab2, tab3, tab4 = st.tabs(
+            ["📅 Calendar", "📈 Lag & Rolling", "🌡️ Weather", "🤖 Architecture"]
+        )
 
-    with tab1:
-        st.markdown("""
-| Feature | Description | Why It Matters |
-|---|---|---|
-| `hour` | Hour of day (0–23) | Strong intra-day demand cycles |
-| `dayofweek` | Mon=0 … Sun=6 | Industrial vs residential pattern shift |
-| `dayofmonth` | Calendar day (1–31) | Billing-cycle effects |
-| `dayofyear` | Julian day (1–365) | Annual drift beyond Fourier terms |
-| `weekofyear` | ISO week (1–53) | Festival/holiday window alignment |
-| `is_peak_hour` | 1 if 07:00–10:00 or 18:00–22:00 IST | BESCOM regulated tariff peak windows |
-| `season` | 0=Winter 1=Spring 2=Summer 3=Monsoon | Bangalore 4-season AC & industrial load driver |
-| `hour_sin` / `hour_cos` | Cyclic sine/cosine encoding of hour | Prevents discontinuity at midnight boundary |
-| `dow_sin` / `dow_cos` | Cyclic encoding of day-of-week | Smooth 7-day cycle representation |
-| `doy_sin` / `doy_cos` | Cyclic encoding of day-of-year | Smooth annual seasonality |
-        """)
+        with tab1:
+            st.markdown("""
+    | Feature | Description | Why It Matters |
+    |---|---|---|
+    | `hour` | Hour of day (0–23) | Strong intra-day demand cycles |
+    | `dayofweek` | Mon=0 … Sun=6 | Industrial vs residential pattern shift |
+    | `dayofmonth` | Calendar day (1–31) | Billing-cycle effects |
+    | `dayofyear` | Julian day (1–365) | Annual drift beyond Fourier terms |
+    | `weekofyear` | ISO week (1–53) | Festival/holiday window alignment |
+    | `is_peak_hour` | 1 if 07:00–10:00 or 18:00–22:00 IST | BESCOM regulated tariff peak windows |
+    | `season` | 0=Winter 1=Spring 2=Summer 3=Monsoon | Bangalore 4-season AC & industrial load driver |
+    | `hour_sin` / `hour_cos` | Cyclic sine/cosine encoding of hour | Prevents discontinuity at midnight boundary |
+    | `dow_sin` / `dow_cos` | Cyclic encoding of day-of-week | Smooth 7-day cycle representation |
+    | `doy_sin` / `doy_cos` | Cyclic encoding of day-of-year | Smooth annual seasonality |
+            """)
 
-    with tab2:
-        st.markdown("""
-**Lag Features** — past demand values at fixed 15-min period offsets:
+        with tab2:
+            st.markdown("""
+    **Lag Features** — past demand values at fixed 15-min period offsets:
 
-| Feature | Time Back | Signal |
-|---|---|---|
-| `lag_4` | 1 hour | Very recent load level |
-| `lag_8` | 2 hours | Short-term trend direction |
-| `lag_96` | 24 hours | Same time yesterday (strong autocorrelation) |
-| `lag_192` | 48 hours | Same time two days ago |
-| `lag_672` | 7 days | Same time last week (weekly pattern) |
+    | Feature | Time Back | Signal |
+    |---|---|---|
+    | `lag_4` | 1 hour | Very recent load level |
+    | `lag_8` | 2 hours | Short-term trend direction |
+    | `lag_96` | 24 hours | Same time yesterday (strong autocorrelation) |
+    | `lag_192` | 48 hours | Same time two days ago |
+    | `lag_672` | 7 days | Same time last week (weekly pattern) |
 
-**Rolling Statistics** — sliding window over past demand:
+    **Rolling Statistics** — sliding window over past demand:
 
-| Feature | Window | Captures |
-|---|---|---|
-| `roll_mean_4` / `roll_std_4` | 1-hour | Immediate load stability |
-| `roll_mean_8` / `roll_std_8` | 2-hour | Short-term trend |
-| `roll_mean_96` / `roll_std_96` | 24-hour | Full-day average |
-| `roll_mean_672` / `roll_std_672` | 7-day | Weekly baseline |
+    | Feature | Window | Captures |
+    |---|---|---|
+    | `roll_mean_4` / `roll_std_4` | 1-hour | Immediate load stability |
+    | `roll_mean_8` / `roll_std_8` | 2-hour | Short-term trend |
+    | `roll_mean_96` / `roll_std_96` | 24-hour | Full-day average |
+    | `roll_mean_672` / `roll_std_672` | 7-day | Weekly baseline |
 
-> **Tip:** Upload your feeder CSV so lag features use real history — not a 500 kW placeholder.
-        """)
+    > **Tip:** Upload your feeder CSV so lag features use real history — not a 500 kW placeholder.
+            """)
 
-    with tab3:
-        st.markdown("""
-| Feature | Source | Description |
-|---|---|---|
-| `T2M` | NASA POWER | 2m temperature (°C) — primary AC load driver |
-| `T2M_MAX` | NASA POWER | Daily max temp — heat-wave peak demand |
-| `T2M_MIN` | NASA POWER | Daily min temp — overnight heating baseline |
-| `RH2M` | NASA POWER | Relative humidity (%) — raises AC compressor load |
-| `WS2M` | NASA POWER | Wind speed (m/s) — strong winds reduce AC demand |
-| `PRECTOTCORR` | NASA POWER | Precipitation (mm/day) — rain correlates with demand drop |
-| `ALLSKY_SFC_SW_DWN` | NASA POWER | Solar irradiance (W/m²) — rooftop solar & cooling load proxy |
+        with tab3:
+            st.markdown("""
+    | Feature | Source | Description |
+    |---|---|---|
+    | `T2M` | NASA POWER | 2m temperature (°C) — primary AC load driver |
+    | `T2M_MAX` | NASA POWER | Daily max temp — heat-wave peak demand |
+    | `T2M_MIN` | NASA POWER | Daily min temp — overnight heating baseline |
+    | `RH2M` | NASA POWER | Relative humidity (%) — raises AC compressor load |
+    | `WS2M` | NASA POWER | Wind speed (m/s) — strong winds reduce AC demand |
+    | `PRECTOTCORR` | NASA POWER | Precipitation (mm/day) — rain correlates with demand drop |
+    | `ALLSKY_SFC_SW_DWN` | NASA POWER | Solar irradiance (W/m²) — rooftop solar & cooling load proxy |
 
-> Fetched daily for Bangalore (lat 12.97°, lon 77.59°). Defaults to 0 when unavailable.
-        """)
+    > Fetched daily for Bangalore (lat 12.97°, lon 77.59°). Defaults to 0 when unavailable.
+            """)
 
-    with tab4:
-        st.markdown("""
-### Vidyut Ensemble Architecture
-```
-Raw feeder timeseries (15-min intervals)
-          |
-          v
- [ Feature Engineering ]  <-- 48 features (calendar + lag + rolling + weather)
-          |
-     -----+-----
-     |         |
-  Prophet   LightGBM
-   (40%)     (60%)
-     |         |
-     -----+-----
-          |
-   Weighted Ensemble
-   yhat = 0.4 x Prophet + 0.6 x LightGBM
-          |
-   Prediction Intervals
-   [P10 quantile, P90 quantile]
-```
+        with tab4:
+            st.markdown("""
+    ### Vidyut Ensemble Architecture
+    ```
+    Raw feeder timeseries (15-min intervals)
+              |
+              v
+     [ Feature Engineering ]  <-- 48 features (calendar + lag + rolling + weather)
+              |
+         -----+-----
+         |         |
+      Prophet   LightGBM
+       (40%)     (60%)
+         |         |
+         -----+-----
+              |
+       Weighted Ensemble
+       yhat = 0.4 x Prophet + 0.6 x LightGBM
+              |
+       Prediction Intervals
+       [P10 quantile, P90 quantile]
+    ```
 
-**Prophet** — Fourier-mode decomposition for long-range seasonality with Karnataka holiday regressors.
-Handles trend changepoints and is robust to missing data.
+    **Prophet** — Fourier-mode decomposition for long-range seasonality with Karnataka holiday regressors.
+    Handles trend changepoints and is robust to missing data.
 
-**LightGBM** — gradient-boosted trees learning complex lag/feature interactions.
-Uses 3 separate models: point estimate (L1 loss), P10 quantile, P90 quantile.
+    **LightGBM** — gradient-boosted trees learning complex lag/feature interactions.
+    Uses 3 separate models: point estimate (L1 loss), P10 quantile, P90 quantile.
 
-**Ensemble** — 40/60 weight split optimised on BESCOM held-out validation data to minimise MAPE.
-        """)
+    **Ensemble** — 40/60 weight split optimised on BESCOM held-out validation data to minimise MAPE.
+            """)
 
 
 # ══════════════════════════════════════════════════════════════════════════
