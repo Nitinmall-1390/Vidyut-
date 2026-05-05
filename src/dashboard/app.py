@@ -7,7 +7,7 @@ import io
 from datetime import datetime
 
 # ── CONFIG ──────────────────────────────────────────────────────────────
-API_URL = "http://localhost:8000/api/v1"
+API_URL = "http://127.0.0.1:8000/api/v1"
 TEAL    = "#00D4AA"
 AMBER   = "#FFB800"
 RED     = "#FF4757"

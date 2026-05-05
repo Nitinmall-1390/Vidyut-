@@ -49,18 +49,14 @@ COPY .env.example ./.env
 RUN mkdir -p /app/data/models /app/data/audit /app/logs /app/reports
 
 # Configuration for Supervisor
-RUN echo '[supervisord]\nnodaemon=true\nuser=root\n\n[program:api]\ncommand=uvicorn src.api.app:app --host 0.0.0.0 --port 8000\nautostart=true\nautorestart=true\nstdout_logfile=/app/logs/api.log\nstderr_logfile=/app/logs/api.err.log\n\n[program:dashboard]\ncommand=streamlit run src/dashboard/app.py --server.port 8501 --server.address 0.0.0.0\nautostart=true\nautorestart=true\nstdout_logfile=/app/logs/dashboard.log\nstderr_logfile=/app/logs/dashboard.err.log' > /etc/supervisor/conf.d/supervisord.conf
+RUN echo '[supervisord]\nnodaemon=true\nuser=root\n\n[program:api]\ncommand=uvicorn src.api.app:app --host 0.0.0.0 --port 8000\nautostart=true\nautorestart=true\nstdout_logfile=/app/logs/api.log\nstderr_logfile=/app/logs/api.err.log\n\n[program:dashboard]\ncommand=streamlit run src/dashboard/app.py --server.port 7860 --server.address 0.0.0.0\nautostart=true\nautorestart=true\nstdout_logfile=/app/logs/dashboard.log\nstderr_logfile=/app/logs/dashboard.err.log' > /etc/supervisor/conf.d/supervisord.conf
 
-# Hugging Face Spaces usually listens on port 7860
-# We will expose 7860 and proxy it to Streamlit (8501)
-EXPOSE 7860
-
-# Simple script to handle port mapping for HF
-RUN echo '#!/bin/bash\n# Start supervisor\n/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf' > /app/entrypoint.sh \
+# Entrypoint script
+RUN echo '#!/bin/bash\n\n# Start API in background\nsupervisord -c /etc/supervisor/conf.d/supervisord.conf &\n\n# Wait for API to be ready\necho "Waiting for API on port 8000..."\nfor i in {1..30}; do\n  if curl -s http://127.0.0.1:8000/healthz > /dev/null; then\n    echo "API is UP!"\n    break\n  fi\n  echo "Still waiting... ($i/30)"\n  sleep 2\ndone\n\n# Keep the container alive by waiting for the background process\nwait' > /app/entrypoint.sh \
     && chmod +x /app/entrypoint.sh
 
-# Note: For Hugging Face, you might need to change the Streamlit port to 7860 directly 
-# or use a proxy. Let's set Streamlit to 7860 directly for simplicity in HF.
-RUN sed -i "s/8501/7860/g" /etc/supervisor/conf.d/supervisord.conf
+# Hugging Face Spaces usually listens on port 7860
+EXPOSE 7860
 
 CMD ["/app/entrypoint.sh"]
+
