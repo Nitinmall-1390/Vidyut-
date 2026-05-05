@@ -76,7 +76,7 @@ def fetch_demand(feeder_id: str, horizon: int):
     try:
         r = httpx.post(f"{API_URL}/demand/forecast",
                        json={"feeder_id": feeder_id, "horizon_hours": horizon, "granularity_minutes": 15},
-                       timeout=30.0)
+                       timeout=120.0)
         r.raise_for_status(); return r.json()
     except: return None
 
@@ -84,13 +84,14 @@ def fetch_theft_score(consumer_id, features):
     try:
         r = httpx.post(f"{API_URL}/theft/score",
                        json={"consumer_id": consumer_id, "features": features, "threshold": 0.5},
-                       timeout=30.0)
+                       timeout=120.0)
         r.raise_for_status(); return r.json()
     except: return None
 
 def fetch_theft_rings():
     try:
-        r = httpx.get(f"{API_URL}/theft/rings", timeout=30.0)
+        r = httpx.get(f"{API_URL}/theft/rings", timeout=120.0)
+
         r.raise_for_status(); return r.json()
     except: return None
 
