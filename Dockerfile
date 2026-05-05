@@ -48,12 +48,13 @@ COPY .env.example ./.env
 # Create necessary directories
 RUN mkdir -p /app/data/models /app/data/audit /app/logs /app/reports
 
-# Configuration for Supervisor
-RUN echo '[supervisord]\nnodaemon=true\nuser=root\n\n[program:api]\ncommand=uvicorn src.api.app:app --host 0.0.0.0 --port 8000\nautostart=true\nautorestart=true\nstdout_logfile=/app/logs/api.log\nstderr_logfile=/app/logs/api.err.log\n\n[program:dashboard]\ncommand=streamlit run src/dashboard/app.py --server.port 7860 --server.address 0.0.0.0\nautostart=true\nautorestart=true\nstdout_logfile=/app/logs/dashboard.log\nstderr_logfile=/app/logs/dashboard.err.log' > /etc/supervisor/conf.d/supervisord.conf
+# Configuration for Supervisor (API only)
+RUN echo '[supervisord]\nnodaemon=true\nuser=root\n\n[program:api]\ncommand=uvicorn src.api.app:app --host 0.0.0.0 --port 8000\nautostart=true\nautorestart=true\nstdout_logfile=/app/logs/api.log\nstderr_logfile=/app/logs/api.err.log' > /etc/supervisor/conf.d/supervisord.conf
 
-# Entrypoint script
-RUN echo '#!/bin/bash\n\n# Start API in background\nsupervisord -c /etc/supervisor/conf.d/supervisord.conf &\n\n# Wait for API to be ready\necho "Waiting for API on port 8000..."\nfor i in {1..30}; do\n  if curl -s http://127.0.0.1:8000/healthz > /dev/null; then\n    echo "API is UP!"\n    break\n  fi\n  echo "Still waiting... ($i/30)"\n  sleep 2\ndone\n\n# Keep the container alive by waiting for the background process\nwait' > /app/entrypoint.sh \
+# Entrypoint script: Start API, wait for health, then start Dashboard
+RUN echo '#!/bin/bash\n\n# Start API via supervisor\n/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf &\n\n# Wait for API to be ready\necho "Waiting for Vidyut API to initialize models..."\nfor i in {1..60}; do\n  if curl -s http://127.0.0.1:8000/healthz > /dev/null; then\n    echo "API is UP and models are loaded!"\n    break\n  fi\n  echo "Initializing... ($i/60)"\n  sleep 2\ndone\n\n# Start Dashboard\necho "Starting Vidyut Dashboard..."\nstreamlit run src/dashboard/app.py --server.port 7860 --server.address 0.0.0.0' > /app/entrypoint.sh \
     && chmod +x /app/entrypoint.sh
+
 
 # Hugging Face Spaces usually listens on port 7860
 EXPOSE 7860
