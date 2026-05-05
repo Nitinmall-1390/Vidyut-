@@ -9,6 +9,11 @@ import pathlib
 import warnings
 warnings.filterwarnings("ignore")
 
+# Ensure repo root is on path so src.* imports work inside functions
+_ROOT = pathlib.Path(__file__).parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -86,10 +91,54 @@ def load_ensemble(feeder_id: str):
         return None, str(e)
 
 
-def run_forecast(feeder_id: str, horizon_hours: int, granularity_minutes: int = 15):
+def _build_forecast_df(feeder_id: str, timestamps: list, hist_df=None) -> pd.DataFrame:
+    """
+    Build a properly feature-engineered DataFrame ready for ensemble.predict().
+    If hist_df (historical uploaded data) is provided, it is prepended so that
+    lag/rolling features are non-zero for the forecast window.
+    """
+    from datetime import timezone
+    from src.data.feature_engineering import build_demand_features
+
+    # Build the bare future frame with timestamp + demand_kw placeholder
+    future_df = pd.DataFrame({
+        "timestamp": [t.replace(tzinfo=None) if hasattr(t, "tzinfo") else t for t in timestamps],
+        "demand_kw": 500.0,          # Bangalore baseline — lags will shift this away
+        "feeder_id": feeder_id,
+    })
+
+    if hist_df is not None:
+        # Align columns and prepend history so lag features are populated
+        hist_trim = hist_df[["timestamp", "demand_kw", "feeder_id"]].copy()
+        hist_trim["timestamp"] = pd.to_datetime(hist_trim["timestamp"]).dt.tz_localize(None)
+        combined = pd.concat([hist_trim, future_df], ignore_index=True)
+    else:
+        combined = future_df
+
+    feat_df = build_demand_features(
+        combined,
+        datetime_col="timestamp",
+        value_col="demand_kw",
+        weather_df=None,          # no live weather in dashboard — columns filled with 0
+        feeder_col="feeder_id",
+    )
+
+    # Add any missing weather columns the model expects, filled with 0
+    from src.config.feature_config import DEMAND_WEATHER_FEATURES
+    for col in DEMAND_WEATHER_FEATURES:
+        if col not in feat_df.columns:
+            feat_df[col] = 0.0
+
+    # Return only the future rows (last len(timestamps) rows)
+    return feat_df.tail(len(timestamps)).reset_index(drop=True)
+
+
+def run_forecast(feeder_id: str, horizon_hours: int, granularity_minutes: int = 15,
+                hist_df=None):
     """
     Run demand forecast. Returns (summary_dict, points_list, error_msg).
     Falls back to synthetic forecast if models unavailable.
+    hist_df: optional uploaded historical DataFrame (feeder_id, timestamp, demand_kw)
     """
     from datetime import datetime, timedelta, timezone
 
@@ -101,26 +150,9 @@ def run_forecast(feeder_id: str, horizon_hours: int, granularity_minutes: int = 
 
     if ensemble is not None and ensemble.is_fitted:
         try:
-            future_df = pd.DataFrame({"ds": [t.replace(tzinfo=None) for t in timestamps]})
-            future_df["demand_kw"] = 0.0
-            future_df["feeder_id"] = feeder_id
-            future_df["hour_of_day"]  = [t.hour for t in timestamps]
-            future_df["day_of_week"]  = [t.weekday() for t in timestamps]
-            future_df["is_weekend"]   = (future_df["day_of_week"] >= 5).astype(int)
-            future_df["is_holiday"]   = 0
-            future_df["month"]        = [t.month for t in timestamps]
-            future_df["quarter"]      = [(t.month - 1) // 3 + 1 for t in timestamps]
-            future_df["temperature_c"]    = 27.0
-            future_df["humidity_pct"]     = 65.0
-            future_df["wind_mps"]         = 3.0
-            future_df["solar_kwhm2"]      = 4.5
-            future_df["precipitation_mm"] = 0.0
-            for lag in (1, 4, 96, 672):
-                future_df[f"y_lag_{lag}"] = 0.0
-            future_df["y_roll_mean_24"] = 0.0
-            future_df["y_roll_std_24"]  = 0.0
+            feat_df = _build_forecast_df(feeder_id, timestamps, hist_df=hist_df)
 
-            preds = ensemble.predict(future_df, datetime_col="ds")
+            preds = ensemble.predict(feat_df, datetime_col="timestamp")
 
             points = []
             for i, row in preds.iterrows():
@@ -264,7 +296,7 @@ if page == "DEMAND ANALYTICS":
         run_btn = st.button("▶ RUN FORECAST", type="primary", use_container_width=True)
 
     with st.expander("CUSTOM DATASET UPLOAD (Optional)", expanded=False):
-        st.markdown("<div class='feature-card'><h4>Brain Engine — Custom Data Mode</h4><p>Upload feeder CSV. Required columns: <b>feeder_id, timestamp, demand_kw</b></p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'><h4>Brain Engine — Custom Data Mode</h4><p>Upload feeder CSV. Required columns: <b>feeder_id, timestamp, demand_kw</b>. The forecast will use your historical data to compute lag & rolling features for higher accuracy.</p></div>", unsafe_allow_html=True)
         col_up, col_dl = st.columns([4, 1])
         uploaded = col_up.file_uploader("Upload Feeder Dataset (CSV)", type=["csv"])
         col_dl.markdown("<div style='margin-top:27px;'></div>", unsafe_allow_html=True)
@@ -273,18 +305,36 @@ if page == "DEMAND ANALYTICS":
         if uploaded:
             try:
                 df_up = pd.read_csv(uploaded)
-                if not {"feeder_id","timestamp","demand_kw"}.issubset(df_up.columns):
-                    st.error("Missing required columns: feeder_id, timestamp, demand_kw")
+                required = {"feeder_id", "timestamp", "demand_kw"}
+                if not required.issubset(df_up.columns):
+                    missing = required - set(df_up.columns)
+                    st.error(f"❌ Missing required columns: {', '.join(missing)}")
+                    st.session_state.pop("uploaded_df", None)
                 else:
                     df_up["timestamp"] = pd.to_datetime(df_up["timestamp"])
-                    st.success(f"Loaded {len(df_up)} rows | {df_up['feeder_id'].nunique()} feeders")
+                    df_up["demand_kw"] = pd.to_numeric(df_up["demand_kw"], errors="coerce").fillna(0.0)
+                    st.session_state["uploaded_df"] = df_up
+                    st.success(f"✅ Dataset loaded — {len(df_up):,} rows | {df_up['feeder_id'].nunique()} feeder(s). Click **▶ RUN FORECAST** to use this data.")
                     st.dataframe(df_up.head(10), use_container_width=True)
             except Exception as e:
                 st.error(f"Parse error: {e}")
+                st.session_state.pop("uploaded_df", None)
+        else:
+            # Clear uploaded data if file removed
+            st.session_state.pop("uploaded_df", None)
 
     if run_btn:
+        hist_data = st.session_state.get("uploaded_df", None)
+        # If uploaded data exists, filter to the selected feeder
+        if hist_data is not None and feeder_id in hist_data["feeder_id"].values:
+            hist_for_feeder = hist_data[hist_data["feeder_id"] == feeder_id].copy()
+        elif hist_data is not None:
+            hist_for_feeder = hist_data.copy()   # use all data even if feeder_id doesn't match exactly
+        else:
+            hist_for_feeder = None
+
         with st.spinner("Running Vidyut Ensemble Forecast..."):
-            summary, points, warn = run_forecast(feeder_id, horizon)
+            summary, points, warn = run_forecast(feeder_id, horizon, hist_df=hist_for_feeder)
 
         if warn:
             st.warning(warn)
@@ -333,6 +383,106 @@ if page == "DEMAND ANALYTICS":
         peak_time = df.loc[peak_idx, "timestamp"].strftime("%H:%M")
         lf = summary["mean_kw"] / summary["max_kw"] * 100
         st.info(f"Peak demand of **{summary['max_kw']:.1f} kW** forecast at **{peak_time}**. Load factor: **{lf:.1f}%**.")
+
+
+# ── Feature Explanation (always visible on Demand Analytics page) ──────────
+with st.expander("📖 HOW IT WORKS — Feature Reference", expanded=False):
+    st.markdown(
+        "<p style='color:#7B8FAB;font-size:13px;margin-bottom:16px;'>"
+        "Vidyut's ensemble (Prophet 40% + LightGBM 60%) uses <b>48 engineered features</b> "
+        "in 4 categories: Calendar, Lag/Rolling, Weather, and Architecture.</p>",
+        unsafe_allow_html=True,
+    )
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["📅 Calendar", "📈 Lag & Rolling", "🌡️ Weather", "🤖 Architecture"]
+    )
+
+    with tab1:
+        st.markdown("""
+| Feature | Description | Why It Matters |
+|---|---|---|
+| `hour` | Hour of day (0–23) | Strong intra-day demand cycles |
+| `dayofweek` | Mon=0 … Sun=6 | Industrial vs residential pattern shift |
+| `dayofmonth` | Calendar day (1–31) | Billing-cycle effects |
+| `dayofyear` | Julian day (1–365) | Annual drift beyond Fourier terms |
+| `weekofyear` | ISO week (1–53) | Festival/holiday window alignment |
+| `is_peak_hour` | 1 if 07:00–10:00 or 18:00–22:00 IST | BESCOM regulated tariff peak windows |
+| `season` | 0=Winter 1=Spring 2=Summer 3=Monsoon | Bangalore 4-season AC & industrial load driver |
+| `hour_sin` / `hour_cos` | Cyclic sine/cosine encoding of hour | Prevents discontinuity at midnight boundary |
+| `dow_sin` / `dow_cos` | Cyclic encoding of day-of-week | Smooth 7-day cycle representation |
+| `doy_sin` / `doy_cos` | Cyclic encoding of day-of-year | Smooth annual seasonality |
+        """)
+
+    with tab2:
+        st.markdown("""
+**Lag Features** — past demand values at fixed 15-min period offsets:
+
+| Feature | Time Back | Signal |
+|---|---|---|
+| `lag_4` | 1 hour | Very recent load level |
+| `lag_8` | 2 hours | Short-term trend direction |
+| `lag_96` | 24 hours | Same time yesterday (strong autocorrelation) |
+| `lag_192` | 48 hours | Same time two days ago |
+| `lag_672` | 7 days | Same time last week (weekly pattern) |
+
+**Rolling Statistics** — sliding window over past demand:
+
+| Feature | Window | Captures |
+|---|---|---|
+| `roll_mean_4` / `roll_std_4` | 1-hour | Immediate load stability |
+| `roll_mean_8` / `roll_std_8` | 2-hour | Short-term trend |
+| `roll_mean_96` / `roll_std_96` | 24-hour | Full-day average |
+| `roll_mean_672` / `roll_std_672` | 7-day | Weekly baseline |
+
+> **Tip:** Upload your feeder CSV so lag features use real history — not a 500 kW placeholder.
+        """)
+
+    with tab3:
+        st.markdown("""
+| Feature | Source | Description |
+|---|---|---|
+| `T2M` | NASA POWER | 2m temperature (°C) — primary AC load driver |
+| `T2M_MAX` | NASA POWER | Daily max temp — heat-wave peak demand |
+| `T2M_MIN` | NASA POWER | Daily min temp — overnight heating baseline |
+| `RH2M` | NASA POWER | Relative humidity (%) — raises AC compressor load |
+| `WS2M` | NASA POWER | Wind speed (m/s) — strong winds reduce AC demand |
+| `PRECTOTCORR` | NASA POWER | Precipitation (mm/day) — rain correlates with demand drop |
+| `ALLSKY_SFC_SW_DWN` | NASA POWER | Solar irradiance (W/m²) — rooftop solar & cooling load proxy |
+
+> Fetched daily for Bangalore (lat 12.97°, lon 77.59°). Defaults to 0 when unavailable.
+        """)
+
+    with tab4:
+        st.markdown("""
+### Vidyut Ensemble Architecture
+```
+Raw feeder timeseries (15-min intervals)
+          |
+          v
+ [ Feature Engineering ]  <-- 48 features (calendar + lag + rolling + weather)
+          |
+     -----+-----
+     |         |
+  Prophet   LightGBM
+   (40%)     (60%)
+     |         |
+     -----+-----
+          |
+   Weighted Ensemble
+   yhat = 0.4 x Prophet + 0.6 x LightGBM
+          |
+   Prediction Intervals
+   [P10 quantile, P90 quantile]
+```
+
+**Prophet** — Fourier-mode decomposition for long-range seasonality with Karnataka holiday regressors.
+Handles trend changepoints and is robust to missing data.
+
+**LightGBM** — gradient-boosted trees learning complex lag/feature interactions.
+Uses 3 separate models: point estimate (L1 loss), P10 quantile, P90 quantile.
+
+**Ensemble** — 40/60 weight split optimised on BESCOM held-out validation data to minimise MAPE.
+        """)
 
 
 # ══════════════════════════════════════════════════════════════════════════
