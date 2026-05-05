@@ -151,3 +151,40 @@ BANGALORE_SEASONS: Dict[int, int] = {
 
 # Peak hour ranges (IST, 24h)
 PEAK_HOUR_RANGES: List[Tuple[int, int]] = [(7, 10), (18, 22)]
+
+
+# ── Transformer Capacity & Load-Shedding Thresholds (BESCOM Standard) ────────
+
+TRANSFORMER_CAPACITY_MAP: Dict[str, int] = {
+    "25_kVA":   25,
+    "63_kVA":   63,
+    "100_kVA":  100,   # Most common in Bangalore urban
+    "200_kVA":  200,   # Commercial/mixed
+    "315_kVA":  315,
+    "400_kVA":  400,
+    "630_kVA":  630,   # Heavy industrial
+}
+
+# Default for hackathon demo: 100 kVA @ PF 0.85 → 85 kW max
+DEFAULT_TRANSFORMER_KVA: int = 100
+DEFAULT_POWER_FACTOR: float = 0.85
+
+# Alert thresholds (fraction of rated capacity)
+LOAD_SHEDDING_RULES: Dict[str, float] = {
+    "YELLOW_ALERT":   0.80,   # 80%  → warning, monitor closely
+    "ORANGE_ALERT":   0.90,   # 90%  → high risk, prepare shedding
+    "RED_ALERT":      0.95,   # 95%  → load shedding imminent (15-30 min)
+    "TRIP_THRESHOLD": 1.10,   # 110% → transformer trip (auto-protection)
+}
+
+# 8 BESCOM operational zones with real Bangalore centroids
+BESCOM_ZONES: Dict[str, Dict] = {
+    "Zone_East":    {"lat": 12.96, "lon": 77.65, "color": "#FF4757"},
+    "Zone_West":    {"lat": 12.97, "lon": 77.55, "color": "#00D4AA"},
+    "Zone_North":   {"lat": 13.03, "lon": 77.58, "color": "#FFB800"},
+    "Zone_South":   {"lat": 12.90, "lon": 77.58, "color": "#4A7FA5"},
+    "Zone_Central": {"lat": 12.97, "lon": 77.60, "color": "#A855F7"},
+    "Zone_NE":      {"lat": 13.05, "lon": 77.65, "color": "#F97316"},
+    "Zone_SE":      {"lat": 12.90, "lon": 77.68, "color": "#06B6D4"},
+    "Zone_NW":      {"lat": 13.03, "lon": 77.52, "color": "#84CC16"},
+}
