@@ -1,0 +1,71 @@
+# ===========================================================================
+# VIDYUT API — production container
+# ===========================================================================
+# Multi-stage: builder installs heavy deps, runtime carries only what's needed.
+# Targets size ~600 MB instead of ~2 GB monolithic.
+# ===========================================================================
+
+FROM python:3.10-slim AS builder
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc g++ libgomp1 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY requirements.txt setup.py README.md ./
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+COPY src/ ./src/
+RUN pip install --no-deps -e .
+
+# ===========================================================================
+FROM python:3.10-slim AS runtime
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    PYTHONPATH="/app" \
+    PORT=8000 \
+    LOG_LEVEL=INFO \
+    LOG_JSON=true \
+    CACHE_ENABLED=true \
+    REDIS_HOST=redis \
+    REDIS_PORT=6379 \
+    MODEL_VERSION=LATEST \
+    MODELS_ROOT=/app/data/models \
+    AUDIT_DB_PATH=/app/data/audit/vidyut_audit.db \
+    VIDYUT_DB_PATH=/app/data/vidyut.db
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -g 1000 vidyut && useradd -u 1000 -g vidyut -m -s /bin/bash vidyut
+
+COPY --from=builder /opt/venv /opt/venv
+WORKDIR /app
+COPY --chown=vidyut:vidyut src/ ./src/
+COPY --chown=vidyut:vidyut setup.py README.md ./
+
+RUN mkdir -p /app/data/models /app/data/audit /app/logs /app/reports \
+    && chown -R vidyut:vidyut /app
+
+USER vidyut
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS http://localhost:${PORT}/healthz || exit 1
+
+CMD ["uvicorn", "src.api.app:app", \
+    "--host", "0.0.0.0", \
+    "--port", "8000", \
+    "--workers", "2", \
+    "--log-level", "info", \
+    "--proxy-headers", \
+    "--forwarded-allow-ips", "*"]
