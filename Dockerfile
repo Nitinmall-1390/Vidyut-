@@ -40,7 +40,9 @@ COPY --from=builder /opt/venv /opt/venv
 WORKDIR /app
 
 COPY src/ ./src/
+COPY data/ ./data/
 COPY setup.py README.md ./
+
 COPY .env.example ./.env
 
 # Create necessary directories
