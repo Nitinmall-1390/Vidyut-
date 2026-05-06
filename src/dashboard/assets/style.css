@@ -1,9 +1,13 @@
 /* VIDYUT — Government-grade Dashboard CSS */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
 
-html, body, [class*="css"] {
+html, body {
     font-family: 'Inter', sans-serif !important;
     font-size: 13px;
+    color: #ECF0F6;
+}
+/* Scope color to markdown text only — don't force it on Streamlit internals */
+p, span, h1, h2, h3, h4, h5, h6, li, label, .stMarkdown, .stCaption {
     color: #ECF0F6;
 }
 
@@ -147,9 +151,30 @@ p  { color: #7B8FAB; line-height: 1.7; }
 }
 
 /* ── Dataframe / Table ───────────────────────────────────────────────── */
-[data-testid="stDataFrame"] { border: 1px solid #0F1F38; border-radius: 4px; }
-.dvn-scroller { background: #080F1E !important; }
-.cell-wrap-text { color: #ECF0F6 !important; font-size: 12px !important; }
+[data-testid="stDataFrame"] {
+    border: 1px solid #0F1F38;
+    border-radius: 4px;
+    min-height: 80px;
+}
+/* Streamlit 1.32+ glide-data-grid backgrounds */
+[data-testid="stDataFrame"] [role="grid"] {
+    background-color: #080F1E !important;
+}
+[data-testid="stDataFrame"] [role="columnheader"] {
+    background-color: #0A1628 !important;
+    color: #7B8FAB !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+}
+[data-testid="stDataFrame"] [role="gridcell"] {
+    background-color: #080F1E !important;
+    color: #ECF0F6 !important;
+    font-size: 12px !important;
+}
+/* Hover on dataframe rows */
+[data-testid="stDataFrame"] [role="row"]:hover [role="gridcell"] {
+    background-color: rgba(0,212,170,0.05) !important;
+}
 
 /* ── File uploader ───────────────────────────────────────────────────── */
 [data-testid="stFileUploader"] {
