@@ -207,10 +207,17 @@ with tab_batch:
             fig_pie = go.Figure(go.Pie(
                 labels=lt_counts.index.tolist(), values=lt_counts.values.tolist(),
                 marker_colors=[type_colors.get(l,TEAL) for l in lt_counts.index],
-                hole=0.5, textfont=dict(color="#ECF0F6"), textposition="inside"))
+                hole=0.5,
+                textfont=dict(color="#ECF0F6", size=12),
+                textposition="outside",
+                textinfo="label+percent",
+                pull=[0.02]*len(lt_counts),
+                hovertemplate="%{label}<br>Count: %{value}<br>Share: %{percent}<extra></extra>"))
             fig_pie.update_layout(**{**PLOTLY_LAYOUT,
-                "title":"Loss Type Distribution","height":260,
-                "margin":dict(t=40,b=10,l=10,r=10)})
+                "title":"Loss Type Distribution","height":280,
+                "margin":dict(t=40,b=10,l=10,r=80),
+                "showlegend":False,
+                "automargin":True})
             c_pie, c_tbl = st.columns([1,2])
             with c_pie:
                 st.plotly_chart(fig_pie, use_container_width=True)
