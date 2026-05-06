@@ -1,0 +1,260 @@
+================================================================================
+VIDYUT AI — BESCOM Grid Intelligence
+Step-by-Step Run Instructions | Hackathon Demo Guide
+================================================================================
+
+Deploy URL : https://huggingface.co/spaces/nitinmal1121212/vidyut-ai
+Local      : streamlit run src/dashboard/app.py
+
+================================================================================
+GENERAL WORKFLOW (All Modules)
+================================================================================
+
+1. Open app in browser → Sidebar shows 6 modules.
+2. Click any module name in sidebar to navigate.
+3. Every module that requires a model run has a PRIMARY ACTION button
+   (e.g. RUN FORECAST, SCAN NETWORK, RUN BATCH SCAN, etc.).
+4. Results appear ONLY after clicking that button.
+5. If you change any setting (slider, dropdown, etc.), previous results
+   are cleared automatically — click the button again.
+6. All tables have CSV export buttons at the bottom.
+
+================================================================================
+MODULE 1: DEMAND FORECASTING
+================================================================================
+
+Step 1 — Upload Data (optional)
+  1a. Click "UPLOAD FEEDER DATA (CSV)" expander.
+  1b. Drag & drop or browse your CSV/Excel.
+      Required columns: feeder_id, timestamp, demand_kw.
+  1c. Click "Download Sample CSV" if you need a template.
+  1d. Uploaded data preview appears immediately below (first 5 rows).
+
+Step 2 — Configure
+  2a. In sidebar: choose Transformer Rating (kVA).
+  2b. In sidebar: pick Zone Filter (All Zones or one of 8 BESCOM zones).
+  2c. In main panel: pick Feeder ID (auto-filled from upload or type manually).
+  2d. Pick Forecast Horizon: 12h / 24h / 48h / 72h / 7d / 30d.
+  2e. Pick Granularity: 15 min / 30 min / 1 hr.
+
+Step 3 — Run
+  3a. Click green "RUN FORECAST" button.
+  3b. Spinner runs → results load.
+
+Step 4 — View Results
+  4a. KPI strip: Peak Demand, Mean Load, Min Load, Total Energy,
+      Capacity Used %, Transformer kVA.
+  4b. Load Shedding Alert banner auto-appears if peak >= 80% capacity.
+  4c. Interactive Plotly chart: ensemble forecast + Prophet + LightGBM
+      components. Hover for exact values. Use range slider below chart.
+  4d. Peak Hour Breakdown: Top-3 peak hours with average load.
+  4e. Click "Export Forecast CSV" to download predictions.
+
+Extra Tabs
+  - "Zone Heatmap" → Color-coded zone risk cards.
+  - "Feeder Compare" → Multi-feeder relative load comparison chart.
+  - "Feature Guide" → Expandable reference for calendar/lag/weather features.
+
+================================================================================
+MODULE 2: THEFT ALERTS
+================================================================================
+
+TAB A — SINGLE CONSUMER
+-----------------------
+Step 1 — Enter Profile
+  1a. Type Consumer Account Number (e.g. CONSUM_00001).
+  1b. Adjust sliders: Avg Daily Consumption, MoM Drop %, Zero-Reading Days,
+      Billing Divergence Score.
+  1c. Rule Engine Flags auto-update below the sliders.
+
+Step 2 — Analyze
+  2a. Click "ANALYZE CONSUMER".
+  2b. Risk banner appears: HIGH/MEDIUM/LOW + loss type
+      (theft / technical / billing / normal) + probability %.
+  2c. Confidence bar + gauge chart (0-100%) appears.
+  2d. Expand "SHAP Feature Explanation" to see which features drove the score.
+  2e. Expand "Raw Engine Response" for JSON output.
+
+TAB B — BATCH ALERTS
+--------------------
+Step 1 — Upload (optional)
+  1a. Click "Upload Consumer Dataset" area.
+  1b. Upload CSV/Excel with columns: consumer_id, zone, feeder_id,
+      latitude, longitude, consumer_type, day_1 ... day_N.
+  1c. Download sample CSV if needed. Preview appears immediately.
+
+Step 2 — Run
+  2a. Click "RUN BATCH SCAN".
+  2b. Spinner runs 3-stage pipeline on demo dataset (or uploaded data).
+
+Step 3 — View Results
+  3a. Metrics strip: Total Scanned, Flagged Alerts, HIGH Confidence,
+      Detection Rate %, Mode (Intersection / Union).
+  3b. Loss Type Distribution donut chart: click slices to isolate.
+  3c. Top 10 High-Confidence Alerts table (right of chart).
+  3d. Use Zone / Type / Level dropdowns below to filter full alert table.
+  3e. Click "Export Alerts CSV" to download all filtered records.
+
+TAB C — PATTERN ANALYSIS
+------------------------
+  - Read 4 pattern descriptions (Sudden Drop, Zero Streak, Night Spike,
+    Gradual Decline).
+  - Visual chart shows synthetic examples of each pattern type.
+
+================================================================================
+MODULE 3: GEOSPATIAL MAP
+================================================================================
+
+Step 1 — Load Data
+  1a. Page auto-loads 200 consumers on first visit.
+  1b. Adjust "Dataset Size" slider in sidebar (100-500).
+  1c. Pick Display Mode in sidebar:
+      - "Consumer Pins" → colored dots on map
+      - "Theft Heatmap" → 3D hexagon elevation
+      - "Zone Overlay" → pins with zone context
+  1d. Select Zones and Risk Levels in sidebar to filter.
+
+Step 2 — View Map
+  2a. Bangalore city map loads centered at (12.97, 77.59).
+  2b. Click any marker for tooltip: consumer_id, zone, theft probability.
+  2c. In Heatmap mode: scroll to zoom, drag to rotate (45° pitch).
+
+Step 3 — Intelligence Panels
+  3a. Top metrics strip: Consumers, Flagged, HIGH Risk, Zones, Avg Risk.
+  3b. "Zone Intelligence Summary" table below map.
+  3c. "Top 50 Consumer Hotspots" scrollable table with lat/lon.
+  3d. Click "Export CSV" to download geospatial alert data.
+
+Step 4 — Refresh
+  4a. Change any sidebar setting → map auto-refreshes.
+  4b. Or click "Force Refresh Data" to regenerate from scratch.
+
+================================================================================
+MODULE 4: RING DETECTION
+================================================================================
+
+Step 1 — Configure
+  1a. In sidebar: set Min Anomaly Ratio (0.0-1.0).
+  1b. Set Min Ring Size (2-20 consumers).
+  1c. Toggle "Show Member Edges" on/off.
+  1d. Adjust Demo Dataset Size (50-300 consumers).
+
+Step 2 — Scan
+  2a. Click "SCAN NETWORK" button.
+  2b. Louvain community detection runs (O(n log n)).
+
+Step 3 — Explore Tabs
+
+  TAB: Network Graph
+    - Interactive Plotly graph: ring centroids (large nodes) + members
+      (small nodes). Same color = same ring.
+    - Hover any node for ring ID, member count, anomaly %, risk level.
+    - Scroll to zoom, drag to pan.
+    - Top 6 detected rings shown as badge cards below graph.
+
+  TAB: Formation Timeline
+    - Bubble scatter chart: X = detection date, Y = severity score,
+      bubble size = member count, color = risk.
+    - Hover for ring ID and formed date.
+
+  TAB: Ring Roster
+    - Select any Ring ID from dropdown.
+    - View member table: each consumer flagged as NORMAL or FLAGGED.
+    - Full ring roster table at bottom with all rings.
+    - Click "Export Ring Data CSV" to download.
+
+================================================================================
+MODULE 5: AUDIT TRAIL
+================================================================================
+
+Step 1 — Filter (Sidebar)
+  1a. Pick From Date and To Date (default: last 60 days).
+  1b. Select Alert Types: theft / technical / billing / normal.
+  1c. Set Min Confidence (0-100).
+  1d. Pick Model Version: All / v1.0 / v1.1 / v2.0.
+
+Step 2 — View Tabs
+
+  TAB: Audit Log
+    - Metrics strip: Total Records, Alerts Raised, HIGH Confidence,
+      Period Days, Model Versions.
+    - Search Consumer ID by partial match (e.g. "CONSUM_").
+    - Scrollable table of 200 most recent records.
+    - Click "Export Audit CSV" to download full filtered log.
+
+  TAB: Analytics
+    - Daily Alert Volume bar chart (resampled daily).
+    - Confidence Score Distribution histogram with HIGH/MEDIUM threshold lines.
+    - Alert Type by Zone stacked bar chart.
+    - Model Version Comparison table.
+
+  TAB: Compliance Report
+    - Regulatory checklist (9 items — all PASS).
+    - Compliance summary metrics table.
+    - Advisory note: false positive target <3%, retrain date.
+    - Click "Export Compliance Report CSV" to download.
+
+================================================================================
+MODULE 6: TIME SERIES FORECAST
+================================================================================
+
+Step 1 — Upload File
+  1a. Drag & drop CSV/Excel in upload area.
+  1b. System auto-detects date column and first numeric target column.
+  1c. If detection is wrong, manually pick Date Column and
+      Target Column from dropdowns.
+  1d. Data loads immediately. Row count and column count shown.
+
+Step 2 — Configure (Sidebar)
+  2a. Forecast Horizon: 7-365 days (step 7).
+  2b. Data Frequency: Daily / Weekly / Monthly / Business Daily.
+  2c. Trend Component: Additive / Multiplicative / None.
+  2d. Seasonal Component: Additive / Multiplicative / None.
+  2e. Seasonal Period: e.g. 7 (weekly), 12 (monthly), 365 (yearly).
+
+Step 3 — Verify Data (Tabs always visible before run)
+  3a. "Data Preview" tab → 4 metrics (rows, date range, min, max) +
+      first 10 rows table.
+  3b. "Statistics" tab → descriptive stats + historical line chart.
+
+Step 4 — Run Forecast
+  4a. Click "RUN FORECAST" button.
+  4b. Spinner: "Fitting Holt-Winters model..."
+  4c. If error appears (e.g. not enough data), try switching Trend/Seasonal
+      to "None" or reducing Seasonal Period.
+
+Step 5 — View Results
+  5a. "Forecast Results" tab opens automatically.
+  5b. KPIs: MAE, RMSE, MAPE, Forecast Peak, Forecast Peak Date.
+  5c. Interactive chart:
+      - 95% confidence band (faint green)
+      - 80% confidence band (brighter green)
+      - Historical data (solid teal)
+      - Model fit (dotted blue)
+      - Forecast line (dashed amber)
+      - Vertical "Forecast Start" divider
+      - Range slider at bottom for zoom
+  5d. Expand "View Forecast Table" for date-by-date values + bounds.
+
+Step 6 — Export
+  6a. Go to "Export" tab.
+  6b. Click "Download Full Forecast CSV" — contains historical + forecast
+      combined with all confidence intervals.
+  6c. Accuracy summary table (MAE / RMSE / MAPE) shown for reference.
+
+================================================================================
+TIPS FOR HACKATHON JUDGES / DEMO
+================================================================================
+
+- All primary action buttons are GREEN and say "RUN..." or "SCAN...".
+- If a button is not clicked, results show a grey info message like
+  "Click RUN FORECAST above to generate predictions."
+- Changing any setting (slider, dropdown) clears old results automatically.
+- Every table has an export button — download CSV for offline review.
+- The app is fully responsive; works on laptop, tablet, and large screens.
+- Dark theme is fixed; no toggle needed.
+- All 8 BESCOM zones are pre-configured; no manual zone entry required.
+
+================================================================================
+END OF DOCUMENT
+================================================================================
