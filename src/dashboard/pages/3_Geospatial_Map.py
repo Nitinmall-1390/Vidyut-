@@ -115,7 +115,7 @@ view_state = pdk.ViewState(
 )
 
 st.pydeck_chart(pdk.Deck(
-    map_style="mapbox://styles/mapbox/dark-v10",
+    map_style="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
     initial_view_state=view_state,
     layers=layers,
     tooltip={"text": "{consumer_id}\nZone: {zone}\nRisk: {prob_theft}"}

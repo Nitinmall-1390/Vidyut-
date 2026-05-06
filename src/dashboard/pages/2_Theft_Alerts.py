@@ -165,17 +165,22 @@ with tab_batch:
 
     with col_sgcc:
         uploaded_sgcc = st.file_uploader(
-            "Upload Consumer CSV (SGCC format)", type=["csv"], key="sgcc_upload",
+            "Upload Consumer Dataset (CSV or Excel)", type=["csv", "xlsx", "xls"], key="sgcc_upload",
             help="consumer_id, zone, feeder_id, latitude, longitude, consumer_type, day_1...day_N")
-        st.download_button("Download Sample SGCC CSV", data=get_sample_sgcc_csv(),
+        st.download_button("Download Sample CSV", data=get_sample_sgcc_csv(),
             file_name="sgcc_sample.csv", mime="text/csv")
 
     if uploaded_sgcc:
         try:
-            df_sgcc = pd.read_csv(uploaded_sgcc)
+            if uploaded_sgcc.name.endswith('.csv'):
+                df_sgcc = pd.read_csv(uploaded_sgcc)
+            else:
+                df_sgcc = pd.read_excel(uploaded_sgcc)
             st.session_state["sgcc_df"] = df_sgcc
             feeders = df_sgcc["feeder_id"].nunique() if "feeder_id" in df_sgcc.columns else "?"
             st.success(f"Loaded {len(df_sgcc)} consumers across {feeders} feeder(s)")
+            with st.expander("Preview Uploaded Consumers", expanded=True):
+                st.dataframe(df_sgcc.head(5), use_container_width=True)
         except Exception as e:
             st.error(f"Parse error: {e}")
 

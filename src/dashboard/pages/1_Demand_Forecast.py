@@ -55,7 +55,7 @@ with tab_forecast:
 
         col_up, col_dl = st.columns([4,1])
         uploaded = col_up.file_uploader(
-            "Upload Feeder Dataset (CSV)", type=["csv"], key="demand_csv")
+            "Upload Feeder Dataset (CSV or Excel)", type=["csv", "xlsx", "xls"], key="demand_csv")
         col_dl.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
         col_dl.download_button(
             "Download Sample CSV", data=get_sample_demand_csv(),
@@ -64,7 +64,10 @@ with tab_forecast:
 
         if uploaded is not None:
             try:
-                df_up = pd.read_csv(uploaded)
+                if uploaded.name.endswith('.csv'):
+                    df_up = pd.read_csv(uploaded)
+                else:
+                    df_up = pd.read_excel(uploaded)
                 required = {"feeder_id","timestamp","demand_kw"}
                 missing  = required - set(df_up.columns)
                 if missing:
@@ -271,7 +274,7 @@ with tab_zone:
     st.pydeck_chart(pdk.Deck(
         layers=[layer],
         initial_view_state=view_state,
-        map_style="mapbox://styles/mapbox/dark-v10",
+        map_style="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
         tooltip={"text": "{Zone}\nLoad Factor: {Load Factor}\nPeak: {Peak kW} kW\nRisk: {Risk}"}
     ))
     st.dataframe(df_zones[["Zone","Load Factor","Mean kW","Peak kW","Risk"]],
