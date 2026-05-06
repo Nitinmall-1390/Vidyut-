@@ -159,10 +159,6 @@ if uploaded_file is None:
     st.info("Please upload a CSV or Excel file to begin. The app will auto-detect your date and value columns.")
     st.stop()
 
-if st.session_state.get("last_uploaded_file") != uploaded_file.name:
-    st.session_state["forecast_started"] = False
-    st.session_state["last_uploaded_file"] = uploaded_file.name
-
 # ─────────────────────────────────────────────────────────────────────────────
 # DATA LOADING (CACHED)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -202,31 +198,7 @@ target_col = c2.selectbox("Target / Value Column", numeric_cols,
                            index=numeric_cols.index(auto_target) if auto_target in numeric_cols else 0)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# RUN FORECAST BUTTON
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown("---")
-col_btn, col_info = st.columns([1, 4])
-run_btn = col_btn.button("RUN FORECAST", type="primary", use_container_width=True)
-col_info.markdown(
-    f"<div style='color:#7B8FAB;font-size:12px;padding-top:12px;'>"
-    f"Holt-Winters Exponential Smoothing &nbsp;|&nbsp; "
-    f"Horizon: <b style='color:#00D4AA'>{forecast_period} days</b> &nbsp;|&nbsp; "
-    f"Trend: <b style='color:#FFB800'>{trend_label}</b> &nbsp;|&nbsp; "
-    f"Seasonal: <b style='color:#FFB800'>{seasonal_label}</b> &nbsp;|&nbsp; "
-    f"Period: <b style='color:#00D4AA'>{seasonal_periods}</b>"
-    f"</div>",
-    unsafe_allow_html=True
-)
-
-if run_btn:
-    st.session_state["forecast_started"] = True
-
-if not st.session_state.get("forecast_started", False):
-    st.info("Configure your settings and click **RUN FORECAST** to analyze the data and generate predictions.")
-    st.stop()
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PREPROCESSING
+# PREPROCESSING (always runs so preview/stats are visible immediately)
 # ─────────────────────────────────────────────────────────────────────────────
 df = df_raw[[date_col, target_col]].copy()
 df.columns = ["ds", "y"]
@@ -259,10 +231,30 @@ if len(df) < 10:
     st.stop()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MODEL FITTING
+# RUN FORECAST BUTTON + SETTINGS CHANGE DETECTION
 # ─────────────────────────────────────────────────────────────────────────────
+st.markdown("---")
+col_btn, col_info = st.columns([1, 4])
+run_btn = col_btn.button("RUN FORECAST", type="primary", use_container_width=True)
+col_info.markdown(
+    f"<div style='color:#7B8FAB;font-size:12px;padding-top:12px;'>"
+    f"Holt-Winters Exponential Smoothing &nbsp;|&nbsp; "
+    f"Horizon: <b style='color:#00D4AA'>{forecast_period} days</b> &nbsp;|&nbsp; "
+    f"Trend: <b style='color:#FFB800'>{trend_label}</b> &nbsp;|&nbsp; "
+    f"Seasonal: <b style='color:#FFB800'>{seasonal_label}</b> &nbsp;|&nbsp; "
+    f"Period: <b style='color:#00D4AA'>{seasonal_periods}</b>"
+    f"</div>",
+    unsafe_allow_html=True
+)
+
+# Detect settings change and clear old forecast so user must click RUN again
 forecast_key = f"fc_{date_col}_{target_col}_{forecast_period}_{freq}_{trend}_{seasonal}_{seasonal_periods}_{len(df)}"
-if "fc_result" not in st.session_state or st.session_state.get("fc_key") != forecast_key:
+if st.session_state.get("fc_key") != forecast_key:
+    st.session_state.pop("fc_result", None)
+    st.session_state["fc_key"] = forecast_key
+
+# Only run model when user explicitly clicks the button
+if run_btn:
     with st.spinner("Fitting Holt-Winters model..."):
         try:
             result = run_holt_winters(
@@ -275,7 +267,6 @@ if "fc_result" not in st.session_state or st.session_state.get("fc_key") != fore
                 seasonal_periods=int(seasonal_periods),
             )
             st.session_state["fc_result"] = result
-            st.session_state["fc_key"]    = forecast_key
             st.session_state["fc_target"] = target_col
             st.session_state["fc_date"]   = date_col
         except Exception as e:
@@ -461,3 +452,9 @@ if "fc_result" in st.session_state:
             ]
         })
         st.dataframe(acc_df, use_container_width=True, hide_index=True)
+
+else:
+    with tab_forecast:
+        st.info("Click **RUN FORECAST** above to generate predictions.")
+    with tab_export:
+        st.info("Forecast results will be available here after you run the forecast.")
