@@ -24,8 +24,6 @@ inject_css()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
-    st.markdown("---")
     st.markdown("**CONFIGURATION**")
     transformer_kva = st.selectbox("Transformer Rating",
         options=list(TRANSFORMER_CAPACITY_MAP.values()), index=2,
@@ -73,26 +71,27 @@ with tab_forecast:
                 if missing:
                     st.error(f"Missing required columns: {', '.join(missing)}")
                     st.info("Expected: feeder_id, timestamp, demand_kw")
-                    st.session_state.pop("uploaded_df", None)
                 else:
                     df_up["timestamp"]  = pd.to_datetime(df_up["timestamp"])
                     df_up["demand_kw"]  = pd.to_numeric(df_up["demand_kw"], errors="coerce").fillna(0.0)
                     st.session_state["uploaded_df"]  = df_up
                     st.session_state["csv_feeders"]  = sorted(df_up["feeder_id"].unique().tolist())
-                    st.success(f"Loaded {len(df_up):,} rows across {df_up['feeder_id'].nunique()} feeder(s).")
-                    st.dataframe(df_up.head(5), use_container_width=True)
-                    # Auto-run forecast for first feeder
-                    if len(st.session_state["csv_feeders"]) > 0:
+                    # Auto-run forecast for first feeder if not already done
+                    if "forecast_result" not in st.session_state and len(st.session_state["csv_feeders"]) > 0:
                         with st.spinner("Running forecast with uploaded data..."):
                             hist_for_feeder = df_up[df_up["feeder_id"]==st.session_state["csv_feeders"][0]].copy()
                             summary, points, warn = run_forecast(st.session_state["csv_feeders"][0], 24, 15, hist_df=hist_for_feeder)
                             st.session_state["forecast_result"] = (summary, points, st.session_state["csv_feeders"][0], 24, 100)
             except Exception as e:
                 st.error(f"File parse error: {e}")
-                st.session_state.pop("uploaded_df", None)
+
+        if "uploaded_df" in st.session_state:
+            df_up = st.session_state["uploaded_df"]
+            st.success(f"Loaded {len(df_up):,} rows across {df_up['feeder_id'].nunique()} feeder(s).")
+            with st.expander("Preview Uploaded Data", expanded=True):
+                st.dataframe(df_up.head(5), use_container_width=True)
         else:
-            st.session_state.pop("uploaded_df", None)
-            st.session_state.pop("csv_feeders", None)
+            st.info("Upload a feeder dataset (CSV/Excel) to use custom data for forecasting.")
 
     # Forecast Config
     st.markdown("**FORECAST PARAMETERS**")
@@ -289,11 +288,16 @@ with tab_compare:
     c3.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
     cmp_btn = c3.button("Compare", type="primary", use_container_width=True)
 
-    if cmp_btn or "cmp_done" not in st.session_state:
-        st.session_state["cmp_done"] = True
+    # Comparison logic
+    cmp_key = f"cmp_{fid1}_{fid2}"
+    if cmp_btn or "cmp_res" not in st.session_state or st.session_state.get("cmp_last_key") != cmp_key:
         with st.spinner("Forecasting both feeders..."):
             s1,p1,_ = run_forecast(fid1, 24)
             s2,p2,_ = run_forecast(fid2, 24)
+            st.session_state["cmp_res"] = (s1, p1, s2, p2)
+            st.session_state["cmp_last_key"] = cmp_key
+    
+    s1, p1, s2, p2 = st.session_state["cmp_res"]
         df1 = pd.DataFrame(p1); df1["timestamp"] = pd.to_datetime(df1["timestamp"])
         df2 = pd.DataFrame(p2); df2["timestamp"] = pd.to_datetime(df2["timestamp"])
         fig_c = go.Figure()

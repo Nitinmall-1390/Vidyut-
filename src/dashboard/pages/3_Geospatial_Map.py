@@ -19,26 +19,29 @@ from src.config.feature_config import BESCOM_ZONES
 inject_css()
 
 with st.sidebar:
-    st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
-    st.markdown("---")
     st.markdown("**MAP SETTINGS**")
     map_mode    = st.radio("Display Mode", ["Consumer Pins","Theft Heatmap","Zone Overlay"])
     zone_filter = st.multiselect("Show Zones", list(BESCOM_ZONES.keys()), default=list(BESCOM_ZONES.keys()))
     risk_filter = st.multiselect("Risk Levels", ["HIGH","MEDIUM","LOW"], default=["HIGH","MEDIUM"])
     n_pts       = st.slider("Dataset Size", 100, 500, 200, 50)
-    st.markdown("---")
-    st.markdown("<div style='font-size:11px;color:#7B8FAB;'><span style='color:#00C48C;'>&#9679;</span> ENGINE ONLINE<br><span style='color:#00C48C;'>&#9679;</span> ML MODELS READY<br><span style='color:#00C48C;'>&#9679;</span> WEATHER: LIVE</div>", unsafe_allow_html=True)
 
 st.markdown("<div class='gov-tag'>BESCOM GIS | GEOSPATIAL INTELLIGENCE MODULE</div>", unsafe_allow_html=True)
 st.title("Geospatial Theft Intelligence Map")
 st.caption("Bangalore-wide consumer anomaly map — 8 BESCOM zones — Click markers for consumer detail")
 
-if st.button("Load Map Data", type="primary") or "geo_data" not in st.session_state:
+# Check if data needs refresh
+params_key = f"geo_p_{n_pts}_{'_'.join(zone_filter)}_{'_'.join(risk_filter)}"
+if "geo_data" not in st.session_state or st.session_state.get("geo_last_key") != params_key:
     with st.spinner("Building geospatial intelligence layer..."):
         df_a = run_batch_theft_analysis(str(n_pts), n_pts)
         def _risk(p): return "HIGH" if p >= 0.65 else ("MEDIUM" if p >= 0.35 else "LOW")
         df_a["risk_level"] = df_a["prob_theft"].apply(_risk)
         st.session_state["geo_data"] = df_a
+        st.session_state["geo_last_key"] = params_key
+
+if st.button("Force Refresh Data", type="primary"):
+    st.session_state.pop("geo_data", None)
+    st.rerun()
 
 df_geo = st.session_state.get("geo_data", pd.DataFrame())
 if df_geo.empty:

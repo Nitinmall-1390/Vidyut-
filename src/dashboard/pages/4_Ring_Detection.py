@@ -23,15 +23,11 @@ def hex_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r},{g},{b},{alpha})"
 
 with st.sidebar:
-    st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
-    st.markdown("---")
     st.markdown("**GRAPH SETTINGS**")
     min_anomaly = st.slider("Min Anomaly Ratio", 0.0, 1.0, 0.40, 0.05)
     min_members = st.number_input("Min Ring Size", 2, 20, 3)
     show_edges  = st.checkbox("Show Member Edges", value=True)
     n_consumers = st.slider("Demo Dataset Size", 50, 300, 150, 50)
-    st.markdown("---")
-    st.markdown("<div style='font-size:11px;color:#7B8FAB;'><span style='color:#00C48C;'>&#9679;</span> ENGINE ONLINE<br><span style='color:#00C48C;'>&#9679;</span> ML MODELS READY<br><span style='color:#00C48C;'>&#9679;</span> WEATHER: LIVE</div>", unsafe_allow_html=True)
 
 st.markdown("<div class='gov-tag'>BESCOM VIGILANCE | SYNDICATE DETECTION MODULE</div>", unsafe_allow_html=True)
 st.title("Theft Ring Intelligence — Network Graph Analysis")
@@ -109,9 +105,16 @@ def build_network_graph(df_rings):
             mx_list, my_list, m_text, m_color, m_size,
             ex, ey)
 
-if scan_btn or "ring_data" not in st.session_state:
+# Check if data needs refresh
+params_key = f"ring_p_{min_anomaly}_{min_members}_{n_consumers}"
+if "ring_data" not in st.session_state or st.session_state.get("ring_last_key") != params_key:
     with st.spinner("Traversing consumer-transformer graph via Louvain algorithm..."):
         st.session_state["ring_data"] = generate_rings(n_consumers)
+        st.session_state["ring_last_key"] = params_key
+
+if st.button("RESCAN NETWORK", type="primary", use_container_width=True):
+    st.session_state.pop("ring_data", None)
+    st.rerun()
 
 df_rings = st.session_state.get("ring_data", pd.DataFrame())
 if df_rings.empty:

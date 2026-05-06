@@ -19,16 +19,12 @@ from src.dashboard.components.shared import (
 inject_css()
 
 with st.sidebar:
-    st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
-    st.markdown("---")
     st.markdown("**DETECTION SETTINGS**")
     min_confidence  = st.slider("Min Confidence Filter", 0, 100, 50)
     detection_mode  = st.radio("Detection Mode",
         ["Intersection (Low FP)","Union (High Recall)"], index=0)
     show_normal     = st.checkbox("Show Normal Consumers", value=False)
     n_consumers     = st.slider("Demo Dataset Size", 50, 500, 200, 50)
-    st.markdown("---")
-    st.markdown("<div style='font-size:11px;color:#7B8FAB;'><span style='color:#00C48C;'>&#9679;</span> ENGINE ONLINE<br><span style='color:#00C48C;'>&#9679;</span> ML MODELS READY<br><span style='color:#00C48C;'>&#9679;</span> WEATHER: LIVE</div>", unsafe_allow_html=True)
 
 st.markdown("<div class='gov-tag'>BESCOM VIGILANCE | ANOMALY AND THEFT DETECTION MODULE</div>", unsafe_allow_html=True)
 st.title("Theft Guard — 3-Stage Detection Pipeline")

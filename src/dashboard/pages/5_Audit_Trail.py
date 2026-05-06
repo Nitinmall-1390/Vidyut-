@@ -18,8 +18,6 @@ from src.dashboard.components.shared import (
 inject_css()
 
 with st.sidebar:
-    st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
-    st.markdown("---")
     st.markdown("**QUERY FILTERS**")
     date_from = st.date_input("From Date", datetime.today() - timedelta(days=60))
     date_to   = st.date_input("To Date",   datetime.today())
@@ -27,8 +25,6 @@ with st.sidebar:
         ["theft","technical","billing","normal"], default=["theft","technical","billing"])
     min_conf_filter   = st.slider("Min Confidence", 0, 100, 0)
     model_ver_filter  = st.selectbox("Model Version", ["All","v1.0","v1.1","v2.0"])
-    st.markdown("---")
-    st.markdown("<div style='font-size:11px;color:#7B8FAB;'><span style='color:#00C48C;'>&#9679;</span> ENGINE ONLINE<br><span style='color:#00C48C;'>&#9679;</span> ML MODELS READY<br><span style='color:#00C48C;'>&#9679;</span> WEATHER: LIVE</div>", unsafe_allow_html=True)
 
 st.markdown("<div class='gov-tag'>BESCOM COMPLIANCE | AUDIT TRAIL MODULE</div>", unsafe_allow_html=True)
 st.title("Prediction Audit Trail")
@@ -105,19 +101,19 @@ with tab_log:
     df_display = df_filtered.head(200).copy()
     if df_display.empty:
         st.info("No audit records match the current filters.")
-        st.stop()
-    df_display["timestamp"] = df_display["timestamp"].dt.strftime("%Y-%m-%d %H:%M")
-    df_display["prob_theft"] = df_display["prob_theft"].apply(lambda x: f"{x:.1%}")
-    show_cols   = ["audit_id","timestamp","consumer_id","zone","alert_type",
-                   "prob_theft","confidence","conf_label","n_rules","triggered_rules","model_version","outcome"]
-    rename_map  = {"audit_id":"Audit ID","timestamp":"Timestamp","consumer_id":"Consumer",
-                   "zone":"Zone","alert_type":"Type","prob_theft":"Prob","confidence":"Conf",
-                   "conf_label":"Level","n_rules":"Rules","triggered_rules":"Triggered Rules",
-                   "model_version":"Model","outcome":"Outcome"}
-    st.dataframe(df_display[show_cols].rename(columns=rename_map),
-                 use_container_width=True, height=420, hide_index=True)
-    st.download_button("Export Audit CSV", df_filtered.to_csv(index=False),
-                       f"vidyut_audit_{date_from}_{date_to}.csv","text/csv")
+    else:
+        df_display["timestamp"] = df_display["timestamp"].dt.strftime("%Y-%m-%d %H:%M")
+        df_display["prob_theft"] = df_display["prob_theft"].apply(lambda x: f"{x:.1%}")
+        show_cols   = ["audit_id","timestamp","consumer_id","zone","alert_type",
+                       "prob_theft","confidence","conf_label","n_rules","triggered_rules","model_version","outcome"]
+        rename_map  = {"audit_id":"Audit ID","timestamp":"Timestamp","consumer_id":"Consumer",
+                       "zone":"Zone","alert_type":"Type","prob_theft":"Prob","confidence":"Conf",
+                       "conf_label":"Level","n_rules":"Rules","triggered_rules":"Triggered Rules",
+                       "model_version":"Model","outcome":"Outcome"}
+        st.dataframe(df_display[show_cols].rename(columns=rename_map),
+                     use_container_width=True, height=420, hide_index=True)
+        st.download_button("Export Audit CSV", df_filtered.to_csv(index=False),
+                           f"vidyut_audit_{date_from}_{date_to}.csv","text/csv")
 
 with tab_analytics:
     st.subheader("Audit Analytics")

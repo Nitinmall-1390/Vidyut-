@@ -32,6 +32,13 @@ try:
         },
         position="sidebar",
     )
+    with st.sidebar:
+        st.markdown(
+            "<div style='padding:10px 0 12px 0;border-bottom:1px solid #1A2D45;margin-bottom:8px;'>"
+            "<div style='font-weight:900;font-size:18px;color:#ECF0F6;'>VIDYUT</div>"
+            "<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>"
+            "</div>", unsafe_allow_html=True)
+        st.markdown("<div style='position: fixed; bottom: 20px; font-size:11px;color:#7B8FAB;'><span style='color:#00C48C;'>&#9679;</span> ENGINE ONLINE<br><span style='color:#00C48C;'>&#9679;</span> ML MODELS READY<br><span style='color:#00C48C;'>&#9679;</span> WEATHER: LIVE</div>", unsafe_allow_html=True)
     # Sidebar branding handled by individual pages to prevent duplicates
 
     pages.run()

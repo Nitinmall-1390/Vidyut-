@@ -97,9 +97,10 @@ p  { color: #7B8FAB; line-height: 1.7; }
     box-shadow: none !important;
 }
 .stButton > button[kind="primary"]:hover {
-    background-color: #00D4AA !important;
-    color: #060E1C !important;
-    box-shadow: 0 4px 12px rgba(0,212,170,0.3) !important;
+    background-color: #1A3D3D !important;
+    color: #00FFCC !important;
+    border-color: #00FFCC !important;
+    box-shadow: 0 0 10px rgba(0,255,204,0.1) !important;
 }
 .stButton > button[kind="secondary"] {
     background: transparent !important;
