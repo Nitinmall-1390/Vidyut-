@@ -18,7 +18,6 @@ from src.dashboard.components.shared import (
 inject_css()
 
 with st.sidebar:
-    st.markdown("<div style='font-weight:900;font-size:16px;color:#ECF0F6;padding:8px 0 4px 0;'>VIDYUT</div>", unsafe_allow_html=True)
     st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**QUERY FILTERS**")
@@ -104,6 +103,9 @@ with tab_log:
         df_filtered = df_filtered[df_filtered["consumer_id"].str.contains(search_id, case=False)]
 
     df_display = df_filtered.head(200).copy()
+    if df_display.empty:
+        st.info("No audit records match the current filters.")
+        st.stop()
     df_display["timestamp"] = df_display["timestamp"].dt.strftime("%Y-%m-%d %H:%M")
     df_display["prob_theft"] = df_display["prob_theft"].apply(lambda x: f"{x:.1%}")
     show_cols   = ["audit_id","timestamp","consumer_id","zone","alert_type",
@@ -159,7 +161,10 @@ with tab_analytics:
     df_mv.columns = ["Version","Alerts","Avg Confidence","Records"]
     df_mv["Avg Confidence"] = df_mv["Avg Confidence"].apply(lambda x: f"{x:.1f}")
     st.markdown("**Model Version Comparison**")
-    st.dataframe(df_mv, use_container_width=True, hide_index=True)
+    if df_mv.empty:
+        st.info("No model versions found in the filtered data.")
+    else:
+        st.dataframe(df_mv, use_container_width=True, hide_index=True)
 
 with tab_compliance:
     st.subheader("Regulatory Compliance Report")
@@ -196,7 +201,11 @@ with tab_compliance:
                                   df_filtered["consumer_id"].nunique(),
                                   df_filtered["zone"].nunique(),
                                   df_filtered["model_version"].nunique()]}
-    st.dataframe(pd.DataFrame(compliance_data), use_container_width=True, hide_index=True)
-    st.download_button("Export Compliance Report CSV",
-        pd.DataFrame(compliance_data).to_csv(index=False),
-        f"vidyut_compliance_{date_from}_{date_to}.csv","text/csv")
+    st.markdown("**Compliance Summary**")
+    if df_filtered.empty:
+        st.info("No data available for compliance report. Adjust the filters to see results.")
+    else:
+        st.dataframe(pd.DataFrame(compliance_data), use_container_width=True, hide_index=True)
+        st.download_button("Export Compliance Report CSV",
+            pd.DataFrame(compliance_data).to_csv(index=False),
+            f"vidyut_compliance_{date_from}_{date_to}.csv","text/csv")

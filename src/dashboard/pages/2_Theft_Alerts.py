@@ -19,7 +19,6 @@ from src.dashboard.components.shared import (
 inject_css()
 
 with st.sidebar:
-    st.markdown("<div style='font-weight:900;font-size:16px;color:#ECF0F6;padding:8px 0 4px 0;'>VIDYUT</div>", unsafe_allow_html=True)
     st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**DETECTION SETTINGS**")
@@ -222,6 +221,8 @@ with tab_batch:
                 top10["prob_theft"] = top10["prob_theft"].apply(lambda x: f"{x:.1%}")
                 top10.columns = ["Consumer","Zone","Type","Prob","Conf","Level","Pattern"]
                 st.dataframe(top10, use_container_width=True, hide_index=True, height=240)
+        else:
+            st.info("No alerts match the current filters. Adjust the detection settings or confidence threshold.")
 
         st.markdown("---")
         st.markdown("**Full Alert Table**")

@@ -19,7 +19,6 @@ from src.config.feature_config import BESCOM_ZONES
 inject_css()
 
 with st.sidebar:
-    st.markdown("<div style='font-weight:900;font-size:16px;color:#ECF0F6;padding:8px 0 4px 0;'>VIDYUT</div>", unsafe_allow_html=True)
     st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**MAP SETTINGS**")
@@ -78,9 +77,9 @@ if map_mode == "Zone Overlay" or map_mode == "Consumer Pins":
         fig.add_trace(go.Scattermapbox(
             lat=[meta["lat"]], lon=[meta["lon"]],
             mode="markers+text",
-            marker=dict(size=40, color=fill_col, opacity=0.12),
+            marker=dict(size=45, color=fill_col, opacity=0.15),
             text=[zone.replace("_"," ")],
-            textfont=dict(size=11, color="#ECF0F6"),
+            textfont=dict(size=12, color="#ECF0F6", family="Inter"),
             textposition="middle center",
             name=f"Zone: {zone}",
             hovertemplate=(f"<b>{zone.replace('_',' ')}</b><br>"
@@ -92,19 +91,20 @@ if map_mode == "Zone Overlay" or map_mode == "Consumer Pins":
 
 # ─── Layer 2: Heatmap density ────────────────────────────────────────────────
 if map_mode == "Theft Heatmap":
-    df_h = df_f[df_f["prob_theft"] >= 0.4]
-    if not df_h.empty:
-        fig.add_trace(go.Densitymapbox(
-            lat=df_h["latitude"], lon=df_h["longitude"],
-            z=df_h["prob_theft"], radius=25,
-            colorscale=[[0,"rgba(0,196,140,0.0)"],
-                        [0.4,"rgba(255,184,0,0.4)"],
-                        [0.7,"rgba(255,71,87,0.5)"],
-                        [1.0,"rgba(180,0,40,0.8)"]],
-            showscale=True, colorbar=dict(title="Risk Score",thickness=12,
-                tickfont=dict(color="#7B8FAB",size=10)),
-            name="Theft Density",
-        ))
+        df_h = df_f[df_f["prob_theft"] >= 0.35]
+        if not df_h.empty:
+            fig.add_trace(go.Densitymapbox(
+                lat=df_h["latitude"], lon=df_h["longitude"],
+                z=df_h["prob_theft"], radius=30,
+                colorscale=[[0,"rgba(0,196,140,0.0)"],
+                            [0.3,"rgba(255,184,0,0.3)"],
+                            [0.5,"rgba(255,184,0,0.5)"],
+                            [0.65,"rgba(255,71,87,0.6)"],
+                            [1.0,"rgba(180,0,40,0.9)"]],
+                showscale=True, colorbar=dict(title="Risk Score",thickness=12,
+                    tickfont=dict(color="#7B8FAB",size=10)),
+                name="Theft Density",
+            ))
 
 # ─── Layer 3: Consumer scatter pins ──────────────────────────────────────────
 if map_mode in ["Consumer Pins","Zone Overlay"]:
@@ -118,7 +118,8 @@ if map_mode in ["Consumer Pins","Zone Overlay"]:
             marker=dict(
                 size=df_r["prob_theft"].apply(lambda p: max(7, p*18)).tolist(),
                 color=color_map[risk],
-                opacity=0.82 if risk=="HIGH" else (0.65 if risk=="MEDIUM" else 0.45),
+                opacity=0.85 if risk=="HIGH" else (0.7 if risk=="MEDIUM" else 0.55),
+                line=dict(width=1, color="white")
             ),
             text=df_r["consumer_id"],
             customdata=df_r[["zone","loss_type","prob_theft"]].values,
@@ -132,13 +133,14 @@ if map_mode in ["Consumer Pins","Zone Overlay"]:
         ))
 
 fig.update_layout(
-    mapbox=dict(style="open-street-map", center=dict(lat=12.97, lon=77.59), zoom=10.5),
-    paper_bgcolor="rgba(0,0,0,0)",
-    height=520,
-    legend=dict(orientation="h", y=-0.08, x=0, bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#7B8FAB", size=11)),
-    margin=dict(t=0, b=0, l=0, r=0),
-)
+        mapbox=dict(style="open-street-map", center=dict(lat=12.97, lon=77.59), zoom=10.5),
+        paper_bgcolor="rgba(0,0,0,0)",
+        height=520,
+        legend=dict(orientation="h", y=-0.08, x=0, bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#7B8FAB", size=11)),
+        margin=dict(t=0, b=0, l=0, r=0),
+        uirevision="constant",
+    )
 st.plotly_chart(fig, use_container_width=True)
 
 # Zone summary panel
@@ -162,14 +164,17 @@ if zone_summary_rows:
     st.dataframe(df_zs, use_container_width=True, hide_index=True)
 
 # Hotspot table
-st.markdown("---")
-st.subheader("Top 50 Consumer Hotspots")
-top = df_f.nlargest(50,"prob_theft")[
-    ["consumer_id","zone","feeder_id","consumer_type","loss_type","prob_theft","confidence","latitude","longitude"]
-].copy()
-top["prob_theft"] = top["prob_theft"].apply(lambda x: f"{x:.1%}")
-top.columns = ["Consumer","Zone","Feeder","Type","Loss","Risk %","Conf","Lat","Lon"]
-st.dataframe(top, use_container_width=True, height=300, hide_index=True)
+    st.markdown("---")
+    st.subheader("Top 50 Consumer Hotspots")
+    if df_f.empty:
+        st.info("No consumer data available. Click 'Load Map Data' to generate the intelligence layer.")
+    else:
+        top = df_f.nlargest(50,"prob_theft")[
+            ["consumer_id","zone","feeder_id","consumer_type","loss_type","prob_theft","confidence","latitude","longitude"]
+        ].copy()
+        top["prob_theft"] = top["prob_theft"].apply(lambda x: f"{x:.1%}")
+        top.columns = ["Consumer","Zone","Feeder","Type","Loss","Risk %","Conf","Lat","Lon"]
+        st.dataframe(top, use_container_width=True, height=300, hide_index=True)
 
 col_e1, col_e2 = st.columns([1,4])
 col_e1.download_button("Export CSV", df_f.to_csv(index=False),

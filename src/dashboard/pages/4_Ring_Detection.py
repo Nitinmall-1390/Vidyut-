@@ -23,7 +23,6 @@ def hex_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r},{g},{b},{alpha})"
 
 with st.sidebar:
-    st.markdown("<div style='font-weight:900;font-size:16px;color:#ECF0F6;padding:8px 0 4px 0;'>VIDYUT</div>", unsafe_allow_html=True)
     st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**GRAPH SETTINGS**")
@@ -160,6 +159,7 @@ with tab_net:
             "xaxis": {"showgrid":False,"zeroline":False,"showticklabels":False,"visible":False},
             "yaxis": {"showgrid":False,"zeroline":False,"showticklabels":False,"visible":False},
             "plot_bgcolor": "rgba(6,14,28,0.95)",
+            "uirevision": "constant",
         })
         st.plotly_chart(fig, use_container_width=True)
 
@@ -202,7 +202,9 @@ with tab_tl:
 with tab_tbl:
     st.subheader("Ring Roster")
     ring_ids = df_rings_f["ring_id"].tolist()
-    if ring_ids:
+    if not ring_ids:
+        st.info("No rings match the current filters. Reduce the minimum anomaly ratio or ring size.")
+    else:
         sel = st.selectbox("Select Ring", ring_ids)
         ring_row = df_rings_f[df_rings_f["ring_id"]==sel].iloc[0]
         rc = RED if ring_row["risk"]=="HIGH" else (AMBER if ring_row["risk"]=="MEDIUM" else GREEN)
@@ -212,7 +214,8 @@ with tab_tbl:
         c3.metric("Severity Score",f"{ring_row['severity_score']:.0f}")
         st.markdown(f"**Zone:** {ring_row['zone']} &nbsp;|&nbsp; "
                     f"**Formed:** {ring_row['formed_days_ago']} days ago &nbsp;|&nbsp; "
-                    f"**Status:** {'Growing' if ring_row['growing'] else 'Stable'}")
+                    f"**Status:** <span style='color:{'#00D4AA' if not ring_row['growing'] else '#FFB800'};font-weight:600;'>{'Stable' if not ring_row['growing'] else 'Growing'}</span>",
+                    unsafe_allow_html=True)
         n_flagged = int(ring_row["member_count"] * ring_row["anomaly_ratio"])
         member_df = pd.DataFrame({"Consumer ID": ring_row["members"],
             "Status": ["FLAGGED" if i < n_flagged else "NORMAL" for i in range(len(ring_row["members"]))]})

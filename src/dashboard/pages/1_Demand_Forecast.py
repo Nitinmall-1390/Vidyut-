@@ -23,7 +23,6 @@ inject_css()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("<div style='font-weight:900;font-size:16px;color:#ECF0F6;padding:8px 0 4px 0;'>VIDYUT</div>", unsafe_allow_html=True)
     st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**CONFIGURATION**")
@@ -78,6 +77,12 @@ with tab_forecast:
                     st.session_state["csv_feeders"]  = sorted(df_up["feeder_id"].unique().tolist())
                     st.success(f"Loaded {len(df_up):,} rows across {df_up['feeder_id'].nunique()} feeder(s).")
                     st.dataframe(df_up.head(5), use_container_width=True)
+                    # Auto-run forecast for first feeder
+                    if len(st.session_state["csv_feeders"]) > 0:
+                        with st.spinner("Running forecast with uploaded data..."):
+                            hist_for_feeder = df_up[df_up["feeder_id"]==st.session_state["csv_feeders"][0]].copy()
+                            summary, points, warn = run_forecast(st.session_state["csv_feeders"][0], 24, 15, hist_df=hist_for_feeder)
+                            st.session_state["forecast_result"] = (summary, points, st.session_state["csv_feeders"][0], 24, 100)
             except Exception as e:
                 st.error(f"File parse error: {e}")
                 st.session_state.pop("uploaded_df", None)
@@ -267,7 +272,9 @@ with tab_zone:
     fig_z.update_layout(
         mapbox=dict(style="open-street-map", center=dict(lat=12.97, lon=77.59), zoom=9.5),
         paper_bgcolor="rgba(0,0,0,0)", height=420, showlegend=False,
-        margin=dict(t=10, b=10, l=10, r=10))
+        margin=dict(t=10, b=10, l=10, r=10),
+        uirevision="constant",
+    )
     st.plotly_chart(fig_z, use_container_width=True)
     st.dataframe(df_zones[["Zone","Load Factor","Mean kW","Peak kW","Risk"]],
                  use_container_width=True, hide_index=True)

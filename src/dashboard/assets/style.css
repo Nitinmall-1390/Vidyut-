@@ -94,6 +94,7 @@ p  { color: #7B8FAB; line-height: 1.7; }
     text-transform: uppercase;
     padding: 10px 20px !important;
     transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,212,170,0.2) !important;
 }
 .stButton > button[kind="primary"]:hover {
     box-shadow: 0 4px 20px rgba(0,212,170,0.3) !important;

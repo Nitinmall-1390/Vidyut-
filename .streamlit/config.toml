@@ -1,7 +1,14 @@
 [server]
-maxUploadSize = 500
+maxUploadSize = 1000
 enableXsrfProtection = false
 headless = true
 
 [browser]
 gatherUsageStats = false
+
+[theme]
+primaryColor = "#00D4AA"
+backgroundColor = "#060E1C"
+secondaryBackgroundColor = "#0A1628"
+textColor = "#ECF0F6"
+font = "sans serif"
