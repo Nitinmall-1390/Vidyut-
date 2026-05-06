@@ -216,8 +216,7 @@ with tab_batch:
             fig_pie.update_layout(**{**PLOTLY_LAYOUT,
                 "title":"Loss Type Distribution","height":280,
                 "margin":dict(t=40,b=10,l=10,r=80),
-                "showlegend":False,
-                "automargin":True})
+                "showlegend":False})
             c_pie, c_tbl = st.columns([1,2])
             with c_pie:
                 st.plotly_chart(fig_pie, use_container_width=True)
