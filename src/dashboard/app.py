@@ -28,6 +28,7 @@ try:
                 st.Page("pages/3_Geospatial_Map.py",   title="Geospatial Map"),
                 st.Page("pages/4_Ring_Detection.py",   title="Ring Detection"),
                 st.Page("pages/5_Audit_Trail.py",      title="Audit Trail"),
+                st.Page("pages/6_Time_Series_Forecast.py", title="Time Series Forecast"),
             ]
         },
         position="sidebar",
@@ -57,12 +58,15 @@ except AttributeError:
     st.title("VIDYUT — Smart Grid Intelligence Engine")
     st.caption("Select a module from the sidebar to begin.")
 
-    c1,c2,c3,c4 = st.columns(4)
+    c1,c2,c3 = st.columns(3)
+    c4,c5,c6 = st.columns(3)
     for col, title, desc in [
         (c1,"Demand Forecast","Multi-horizon ensemble prediction per 11kV feeder. Prophet + LightGBM with weather integration."),
         (c2,"Theft Alerts","LSTM AE + Isolation Forest + XGBoost 3-class pipeline with SHAP explainability."),
         (c3,"Geospatial Map","Bangalore-wide consumer anomaly heatmap with feeder zone overlays."),
         (c4,"Ring Detection","Louvain community detection on consumer-transformer graph identifies syndicates."),
+        (c5,"Audit Trail","Immutable logging of AI predictions and compliance checks."),
+        (c6,"Time Series Forecast","Custom dataset forecasting using Holt-Winters Exponential Smoothing."),
     ]:
         col.markdown(
             f"<div class='vid-card'>"
