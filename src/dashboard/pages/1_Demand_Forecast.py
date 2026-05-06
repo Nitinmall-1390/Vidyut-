@@ -76,12 +76,6 @@ with tab_forecast:
                     df_up["demand_kw"]  = pd.to_numeric(df_up["demand_kw"], errors="coerce").fillna(0.0)
                     st.session_state["uploaded_df"]  = df_up
                     st.session_state["csv_feeders"]  = sorted(df_up["feeder_id"].unique().tolist())
-                    # Auto-run forecast for first feeder if not already done
-                    if "forecast_result" not in st.session_state and len(st.session_state["csv_feeders"]) > 0:
-                        with st.spinner("Running forecast with uploaded data..."):
-                            hist_for_feeder = df_up[df_up["feeder_id"]==st.session_state["csv_feeders"][0]].copy()
-                            summary, points, warn = run_forecast(st.session_state["csv_feeders"][0], 24, 15, hist_df=hist_for_feeder)
-                            st.session_state["forecast_result"] = (summary, points, st.session_state["csv_feeders"][0], 24, 100)
             except Exception as e:
                 st.error(f"File parse error: {e}")
 
@@ -114,7 +108,14 @@ with tab_forecast:
         c4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
         run_btn = c4.button("RUN FORECAST", type="primary", use_container_width=True)
 
-    if run_btn or "forecast_result" not in st.session_state:
+    # Detect settings change and clear old forecast so user must click RUN again
+    fc_key = f"fc_{feeder_id}_{horizon_hours}_{gran_min}_{transformer_kva}"
+    if st.session_state.get("fc_key") != fc_key:
+        st.session_state.pop("forecast_result", None)
+        st.session_state["fc_key"] = fc_key
+
+    # Only run when user explicitly clicks the button
+    if run_btn:
         hist_data = st.session_state.get("uploaded_df")
         hist_for_feeder = None
         if hist_data is not None:
@@ -124,10 +125,10 @@ with tab_forecast:
                 hist_for_feeder = hist_data.copy()
         with st.spinner("Running Vidyut Ensemble Forecast..."):
             summary, points, warn = run_forecast(feeder_id, horizon_hours, gran_min, hist_df=hist_for_feeder)
-        st.session_state["forecast_result"] = (summary, points, feeder_id, horizon_hours, transformer_kva)
+        st.session_state["forecast_result"] = (summary, points, feeder_id, horizon_hours, gran_min, transformer_kva)
 
     if "forecast_result" in st.session_state:
-        summary, points, f_id, h_hrs, t_kva = st.session_state["forecast_result"]
+        summary, points, f_id, h_hrs, g_min, t_kva = st.session_state["forecast_result"]
         alert_lv, load_pct, max_kw = check_load_shedding(summary["max_kw"], t_kva)
         if alert_lv != "NORMAL":
             render_load_alert(alert_lv, load_pct, max_kw)
@@ -197,6 +198,9 @@ with tab_forecast:
         st.download_button("Export Forecast CSV",
             df[["timestamp","yhat_ensemble","yhat_prophet","yhat_lgbm"]].to_csv(index=False),
             f"forecast_{f_id}_{h_hrs}h.csv","text/csv")
+
+    else:
+        st.info("Click **RUN FORECAST** above to generate the demand prediction dashboard.")
 
         # Feature guide — clean table
         with st.expander("HOW IT WORKS — Feature Reference", expanded=False):
