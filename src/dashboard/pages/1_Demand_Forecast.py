@@ -298,20 +298,20 @@ with tab_compare:
             st.session_state["cmp_last_key"] = cmp_key
     
     s1, p1, s2, p2 = st.session_state["cmp_res"]
-        df1 = pd.DataFrame(p1); df1["timestamp"] = pd.to_datetime(df1["timestamp"])
-        df2 = pd.DataFrame(p2); df2["timestamp"] = pd.to_datetime(df2["timestamp"])
-        fig_c = go.Figure()
-        fig_c.add_trace(go.Scatter(x=df1["timestamp"], y=df1["yhat_ensemble"],
-            name=fid1, line=dict(color=TEAL, width=2.5)))
-        fig_c.add_trace(go.Scatter(x=df2["timestamp"], y=df2["yhat_ensemble"],
-            name=fid2, line=dict(color=AMBER, width=2.5)))
-        fig_c.update_layout(**{**PLOTLY_LAYOUT, "title":"Feeder Comparison — 24h", "height":360})
-        st.plotly_chart(fig_c, use_container_width=True)
-        mc1,mc2,mc3,mc4 = st.columns(4)
-        mc1.metric(f"{fid1} Peak",   f"{s1['max_kw']:.1f} kW")
-        mc2.metric(f"{fid1} Energy", f"{s1['total_kwh']:.0f} kWh")
-        mc3.metric(f"{fid2} Peak",   f"{s2['max_kw']:.1f} kW")
-        mc4.metric(f"{fid2} Energy", f"{s2['total_kwh']:.0f} kWh")
+    df1 = pd.DataFrame(p1); df1["timestamp"] = pd.to_datetime(df1["timestamp"])
+    df2 = pd.DataFrame(p2); df2["timestamp"] = pd.to_datetime(df2["timestamp"])
+    fig_c = go.Figure()
+    fig_c.add_trace(go.Scatter(x=df1["timestamp"], y=df1["yhat_ensemble"],
+        name=fid1, line=dict(color=TEAL, width=2.5)))
+    fig_c.add_trace(go.Scatter(x=df2["timestamp"], y=df2["yhat_ensemble"],
+        name=fid2, line=dict(color=AMBER, width=2.5)))
+    fig_c.update_layout(**{**PLOTLY_LAYOUT, "title":"Feeder Comparison — 24h", "height":360})
+    st.plotly_chart(fig_c, use_container_width=True)
+    mc1,mc2,mc3,mc4 = st.columns(4)
+    mc1.metric(f"{fid1} Peak",   f"{s1['max_kw']:.1f} kW")
+    mc2.metric(f"{fid1} Energy", f"{s1['total_kwh']:.0f} kWh")
+    mc3.metric(f"{fid2} Peak",   f"{s2['max_kw']:.1f} kW")
+    mc4.metric(f"{fid2} Energy", f"{s2['total_kwh']:.0f} kWh")
 
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_guide:
