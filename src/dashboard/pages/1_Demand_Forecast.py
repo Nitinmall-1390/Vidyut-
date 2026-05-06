@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
+import pydeck as pdk
 from datetime import datetime, timedelta, timezone
 
 _ROOT = pathlib.Path(__file__).parent.parent.parent.parent
@@ -253,29 +254,26 @@ with tab_zone:
     z3.metric("Peak Zone",       df_zones.loc[df_zones["Peak kW"].idxmax(),"Zone"])
     z4.metric("Avg Load Factor", f"{rng.uniform(0.72,0.88):.1%}")
 
-    fig_z = go.Figure()
-    risk_colors = {"HIGH": RED, "MEDIUM": AMBER, "LOW": GREEN}
-    for _, row in df_zones.iterrows():
-        size_val = float(row["Load Factor"].strip("%")) / 100
-        fig_z.add_trace(go.Scattermapbox(
-            lat=[row["lat"]], lon=[row["lon"]],
-            mode="markers+text",
-            marker=dict(size=max(25, size_val*55),
-                        color=risk_colors[row["Risk"]], opacity=0.75),
-            text=[f"  {row['Zone']}"],
-            textfont=dict(color="white", size=11),
-            textposition="middle right",
-            name=row["Zone"],
-            hovertemplate=(f"<b>{row['Zone']}</b><br>Load Factor: {row['Load Factor']}<br>"
-                           f"Peak: {row['Peak kW']} kW<br>Risk: {row['Risk']}<extra></extra>"),
-        ))
-    fig_z.update_layout(
-        mapbox=dict(style="carto-darkmatter", center=dict(lat=12.97, lon=77.59), zoom=9.5),
-        paper_bgcolor="rgba(0,0,0,0)", height=420, showlegend=False,
-        margin=dict(t=10, b=10, l=10, r=10),
-        uirevision="constant",
+    df_zones["color"] = df_zones["Risk"].map({"HIGH": [255, 71, 87, 200], "MEDIUM": [255, 184, 0, 180], "LOW": [0, 196, 140, 150]})
+    df_zones["radius"] = df_zones["Load Factor"].str.rstrip("%").astype(float) * 50
+    layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=df_zones,
+        get_position=["lon", "lat"],
+        get_color="color",
+        get_radius="radius",
+        pickable=True,
+        stroked=True,
+        get_line_color=[255, 255, 255, 200],
+        line_width_min_pixels=1,
     )
-    st.plotly_chart(fig_z, use_container_width=True)
+    view_state = pdk.ViewState(latitude=12.97, longitude=77.59, zoom=9.5, pitch=0)
+    st.pydeck_chart(pdk.Deck(
+        layers=[layer],
+        initial_view_state=view_state,
+        map_style="mapbox://styles/mapbox/dark-v10",
+        tooltip={"text": "{Zone}\nLoad Factor: {Load Factor}\nPeak: {Peak kW} kW\nRisk: {Risk}"}
+    ))
     st.dataframe(df_zones[["Zone","Load Factor","Mean kW","Peak kW","Risk"]],
                  use_container_width=True, hide_index=True)
 

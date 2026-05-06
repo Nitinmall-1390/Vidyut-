@@ -22,6 +22,7 @@ RUN pip install --upgrade pip && \
 
 COPY src/ ./src/
 COPY data/ ./data/
+COPY .streamlit/ ./.streamlit/
 
 RUN pip install --no-deps -e .
 
