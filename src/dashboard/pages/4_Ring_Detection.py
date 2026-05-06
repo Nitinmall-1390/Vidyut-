@@ -26,7 +26,7 @@ with st.sidebar:
     st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**GRAPH SETTINGS**")
-    min_anomaly = st.slider("Min Anomaly Ratio", 0.0, 1.0, float(RING_ANOMALY_FRACTION_THRESHOLD), 0.05)
+    min_anomaly = st.slider("Min Anomaly Ratio", 0.0, 1.0, 0.40, 0.05)
     min_members = st.number_input("Min Ring Size", 2, 20, 3)
     show_edges  = st.checkbox("Show Member Edges", value=True)
     n_consumers = st.slider("Demo Dataset Size", 50, 300, 150, 50)

@@ -179,7 +179,7 @@ with tab_batch:
         except Exception as e:
             st.error(f"Parse error: {e}")
 
-    if scan_btn:
+    if scan_btn or "batch_alerts" not in st.session_state:
         with st.spinner(f"Running 3-stage pipeline on {n_consumers} consumers..."):
             df_alerts = run_batch_theft_analysis(str(n_consumers), n_consumers)
             st.session_state["batch_alerts"] = df_alerts
@@ -206,7 +206,7 @@ with tab_batch:
             fig_pie = go.Figure(go.Pie(
                 labels=lt_counts.index.tolist(), values=lt_counts.values.tolist(),
                 marker_colors=[type_colors.get(l,TEAL) for l in lt_counts.index],
-                hole=0.5, textfont=dict(color="#ECF0F6")))
+                hole=0.5, textfont=dict(color="#ECF0F6"), textposition="inside"))
             fig_pie.update_layout(**{**PLOTLY_LAYOUT,
                 "title":"Loss Type Distribution","height":260,
                 "margin":dict(t=40,b=10,l=10,r=10)})

@@ -32,14 +32,7 @@ try:
         },
         position="sidebar",
     )
-    # Sidebar brand — appears above nav links
-    with st.sidebar:
-        st.markdown(
-            "<div style='padding:12px 0 14px 0;border-bottom:1px solid #1A2D45;margin-bottom:8px;'>"
-            "<div style='font-weight:900;font-size:18px;color:#ECF0F6;letter-spacing:-0.5px;'>VIDYUT</div>"
-            "<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;margin-top:3px;text-transform:uppercase;'>"
-            "BESCOM &nbsp;&bull;&nbsp; Grid Intelligence Engine</div>"
-            "</div>", unsafe_allow_html=True)
+    # Sidebar branding handled by individual pages to prevent duplicates
 
     pages.run()
 

@@ -111,7 +111,7 @@ with tab_forecast:
         c4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
         run_btn = c4.button("RUN FORECAST", type="primary", use_container_width=True)
 
-    if run_btn:
+    if run_btn or "forecast_result" not in st.session_state:
         hist_data = st.session_state.get("uploaded_df")
         hist_for_feeder = None
         if hist_data is not None:
@@ -270,7 +270,7 @@ with tab_zone:
                            f"Peak: {row['Peak kW']} kW<br>Risk: {row['Risk']}<extra></extra>"),
         ))
     fig_z.update_layout(
-        mapbox=dict(style="open-street-map", center=dict(lat=12.97, lon=77.59), zoom=9.5),
+        mapbox=dict(style="carto-darkmatter", center=dict(lat=12.97, lon=77.59), zoom=9.5),
         paper_bgcolor="rgba(0,0,0,0)", height=420, showlegend=False,
         margin=dict(t=10, b=10, l=10, r=10),
         uirevision="constant",
@@ -288,7 +288,8 @@ with tab_compare:
     c3.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
     cmp_btn = c3.button("Compare", type="primary", use_container_width=True)
 
-    if cmp_btn:
+    if cmp_btn or "cmp_done" not in st.session_state:
+        st.session_state["cmp_done"] = True
         with st.spinner("Forecasting both feeders..."):
             s1,p1,_ = run_forecast(fid1, 24)
             s2,p2,_ = run_forecast(fid2, 24)

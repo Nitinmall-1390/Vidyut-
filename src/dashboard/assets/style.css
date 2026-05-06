@@ -85,19 +85,19 @@ p  { color: #7B8FAB; line-height: 1.7; }
 /* ── Buttons ─────────────────────────────────────────────────────────── */
 .stButton > button[kind="primary"] {
     background: linear-gradient(135deg, #00D4AA, #00A88A) !important;
-    color: #060E1C !important;
+    color: #000000 !important;
     border: none !important;
     border-radius: 4px !important;
-    font-weight: 700 !important;
-    font-size: 12px !important;
+    font-weight: 800 !important;
+    font-size: 13px !important;
     letter-spacing: 0.8px;
     text-transform: uppercase;
     padding: 10px 20px !important;
     transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(0,212,170,0.2) !important;
+    box-shadow: 0 2px 4px rgba(0,212,170,0.15) !important;
 }
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 4px 20px rgba(0,212,170,0.3) !important;
+    box-shadow: 0 4px 12px rgba(0,212,170,0.25) !important;
     transform: translateY(-1px);
 }
 .stButton > button[kind="secondary"] {

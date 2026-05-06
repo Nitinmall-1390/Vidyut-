@@ -117,11 +117,14 @@ def run_forecast(feeder_id: str, horizon_hours: int, granularity_minutes: int = 
     # Synthetic — no warning shown to user
     rng  = np.random.default_rng(abs(hash(feeder_id)) % 2**31)
     base = 500 + rng.uniform(-100, 200)
+    if hist_df is not None and not hist_df.empty and "demand_kw" in hist_df.columns:
+        base = hist_df["demand_kw"].mean()
+        
     points = []
     for ts in timestamps:
         h = ts.hour
         factor = 0.6 + 0.4 * np.sin(np.pi * (h - 6) / 12) if 6 <= h <= 22 else 0.45
-        val = float(np.clip(base * factor + rng.normal(0, 25), 200, 1200))
+        val = float(np.clip(base * factor + rng.normal(0, base * 0.05), base * 0.4, base * 2.5))
         points.append({"timestamp": ts.isoformat(),
                        "yhat_ensemble": round(val, 2),
                        "yhat_prophet":  round(val * 0.98 + rng.normal(0, 5), 2),

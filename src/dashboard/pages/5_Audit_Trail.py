@@ -21,7 +21,7 @@ with st.sidebar:
     st.markdown("<div style='font-size:9px;color:#7B8FAB;letter-spacing:2px;'>BESCOM GRID INTELLIGENCE</div>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**QUERY FILTERS**")
-    date_from = st.date_input("From Date", datetime.today() - timedelta(days=30))
+    date_from = st.date_input("From Date", datetime.today() - timedelta(days=60))
     date_to   = st.date_input("To Date",   datetime.today())
     alert_type_filter = st.multiselect("Alert Type",
         ["theft","technical","billing","normal"], default=["theft","technical","billing"])
