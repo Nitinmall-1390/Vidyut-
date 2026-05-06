@@ -1,0 +1,557 @@
+================================================================================
+VIDYUT AI - BESCOM GRID INTELLIGENCE PLATFORM
+Complete Feature Inventory | Hackathon Submission
+================================================================================
+
+Project: VIDYUT | BESCOM Grid Intelligence
+Organization: Bangalore Electricity Supply Company (BESCOM)
+Deploy URL: https://huggingface.co/spaces/nitinmal1121212/vidyut-ai
+Tech Stack: Streamlit, Plotly, PyDeck, Prophet, LightGBM, Holt-Winters (statsmodels),
+           LSTM Autoencoder, Isolation Forest, XGBoost, Louvain Community Detection,
+           NetworkX, python-louvain, GeoHash, FastAPI, Neon Postgres, Upstash Redis,
+           Docker, Hugging Face Spaces
+
+================================================================================
+MODULE 1: DEMAND FORECASTING (11kV Feeder Intelligence)
+================================================================================
+
+Core Capability:
+Multi-horizon ensemble demand prediction for 11kV distribution feeders
+using Prophet (40%) + LightGBM (60%) ensemble with NASA POWER weather integration.
+
+Sub-Features:
+
+1.1 UPLOAD & INGESTION
+  - CSV / Excel (xlsx, xls) file upload
+  - Required columns: feeder_id, timestamp, demand_kw
+  - Download sample CSV button
+  - Data preview table (first 5 rows)
+  - Auto-validation of required columns with error display
+  - Datetime conversion and numeric coercion for demand_kw
+  - Session state storage of uploaded data
+  - Supports multiple feeders per uploaded file
+
+1.2 CONFIGURATION PANEL (Sidebar)
+  - Transformer Rating selector (50/100/160/250/400/630 kVA)
+  - Auto-converts kVA to kW (0.85 power factor)
+  - Zone Filter dropdown (All Zones + 8 BESCOM zones)
+  - System status panel (Engine Online / ML Models Ready / Weather Live)
+
+1.3 FORECAST PARAMETERS (Main Panel)
+  - Feeder ID selector (auto-populated from uploaded data, or manual entry)
+  - Forecast Horizon: 12h, 24h, 48h, 72h, 7d (168h), 30d (720h)
+  - Granularity: 15 min / 30 min / 1 hr
+  - Explicit RUN FORECAST button with settings-change detection
+  - Settings-change detection: changing feeder/horizon/granularity/transformer
+    clears previous forecast and forces re-run
+
+1.4 FORECAST EXECUTION
+  - Spinner: "Running Vidyut Ensemble Forecast..."
+  - Fallback to synthetic generation if ensemble model unavailable
+  - Historical data filtering by feeder_id
+  - Lag-based predictions using uploaded historical data
+
+1.5 RESULTS DASHBOARD (Appears after RUN FORECAST)
+  KPI Metrics (6-column strip):
+    - Peak Demand (kW)
+    - Mean Load (kW)
+    - Min Load (kW)
+    - Total Energy (kWh)
+    - Capacity Used (%)
+    - Transformer (kVA)
+
+  Load Shedding Alerts (Auto-triggered):
+    - NORMAL (< 80% capacity)
+    - YELLOW_ALERT (>= 80%)
+    - ORANGE_ALERT (>= 90%)
+    - RED_ALERT (>= 95%)
+    - TRIP_IMMINENT (>= 110%)
+
+  Interactive Plotly Chart:
+    - Ensemble Forecast line (solid, TEAL)
+    - Prophet component (40%, dashed, BLUE)
+    - LightGBM component (60%, dotted, AMBER)
+    - Transformer limit horizontal reference line (dotted, RED)
+    - Peak demand marker (triangle, RED, with value annotation)
+    - ModeBar: drawline, eraseshape, scrollZoom
+    - Hovertemplate: time + demand value
+
+  Peak Hour Breakdown:
+    - Top-3 peak hours with avg kW metrics
+    - Load Factor calculation and display
+    - Peak timestamp in IST
+
+  Export:
+    - Download Forecast CSV (timestamp, yhat_ensemble, yhat_prophet, yhat_lgbm)
+
+1.6 FEATURE GUIDE (expandable, when no forecast)
+  - Calendar Features tab: hour, dayofweek, is_peak_hour, season, hour_sin/cos
+  - Lag & Rolling tab: lag_4 (1h), lag_96 (24h), lag_672 (7d), rolling stats
+  - Weather tab: T2M, RH2M, ALLSKY_SFC_SW_DWN from NASA POWER
+  - Architecture tab: Prophet + LightGBM ensemble details, quantile intervals
+
+1.7 ZONE HEATMAP TAB
+  - Zone-Level Risk Heatmap for 8 BESCOM Zones
+  - Zone cards with load factor, mean demand, peak demand, capacity
+  - Color-coded risk (green/yellow/red) per zone
+
+1.8 FEEDER COMPARE TAB
+  - Multi-feeder comparison chart
+  - Relative load factor comparison across feeders
+
+================================================================================
+MODULE 2: THEFT ALERTS (3-Stage Detection Pipeline)
+================================================================================
+
+Core Capability:
+Consumer-level power theft, technical loss, and billing anomaly detection
+using LSTM Autoencoder -> Isolation Forest -> XGBoost 3-class pipeline
+with SHAP explainability and rule engine validation.
+
+Sub-Features:
+
+2.1 DETECTION SETTINGS (Sidebar)
+  - Min Confidence Filter (0-100 slider)
+  - Detection Mode: Intersection (Low FP) / Union (High Recall)
+  - Show Normal Consumers checkbox
+  - Demo Dataset Size slider (50-500 consumers)
+
+2.2 SINGLE CONSUMER TAB
+  Individual Consumer Risk Assessment:
+    - Consumer Account No. text input
+    - Avg Daily Consumption slider (0.0 - 50.0 kWh)
+    - Month-on-Month Drop slider (0-100%)
+    - Zero-Reading Days input (0-30)
+    - Billing Divergence Score slider (0.0-1.0)
+    - ANALYZE CONSUMER button
+
+  Rule Engine Flags (auto-displayed before analysis):
+    - R1: Zero-reading streak
+    - R2: MoM drop > 60%
+    - R3: Negative reading
+    - R4: Below minimum charge
+    - R5: Spike anomaly
+    - R6: Flat-line
+    - Color-coded by severity (HIGH/MEDIUM/LOW)
+
+  3-Stage Detection Results (after analysis):
+    - Risk banner: HIGH / MEDIUM / LOW with loss type (theft/technical/billing/normal)
+    - Probability percentage
+    - Confidence score with progress bar (animated width transition)
+    - Confidence label: HIGH (>=80), MEDIUM (50-79), LOW (<50)
+
+  Gauge Chart (Plotly Indicator):
+    - Theft Risk Score 0-100%
+    - 3-color zones: green (0-35), amber (35-65), red (65-100)
+    - Threshold line at 65%
+    - Animated gauge bar
+
+  SHAP Feature Explanation (expander):
+    - MoM Drop, Zero Days, Billing Divergence, Avg kWh feature importance
+    - Impact direction (increases/decreases theft probability)
+    - Color-coded impact bars
+
+2.3 BATCH ALERTS TAB
+  Batch Consumer Alert Dashboard:
+    - RUN BATCH SCAN button
+    - Upload Consumer Dataset (CSV / Excel)
+      Required columns: consumer_id, zone, feeder_id, latitude, longitude,
+                        consumer_type, day_1 ... day_N, label
+    - Download sample CSV
+    - Data preview (first 5 rows)
+
+  Batch Results Metrics (5-column strip):
+    - Total Scanned
+    - Flagged Alerts
+    - HIGH Confidence
+    - Detection Rate (%)
+    - Mode (Intersection/Union)
+
+  Loss Type Distribution (Donut Pie Chart):
+    - Theft (RED), Technical (AMBER), Billing (BLUE), Normal (GREEN)
+    - Hole = 0.5
+    - Text outside with label + percentage
+    - Slice pull separation (0.02)
+    - Hover: label + count + share
+
+  Top High-Confidence Alerts Table:
+    - Columns: Consumer, Zone, Type, Prob, Conf, Level, Pattern
+    - Top 10 by confidence
+    - Probability formatted as percentage
+
+  Full Alert Table with Filters:
+    - Zone filter dropdown (All + detected zones)
+    - Type filter dropdown (All + detected loss types)
+    - Level filter dropdown (All/HIGH/MEDIUM/LOW)
+    - Columns: Consumer, Zone, Feeder, Type, Loss, Prob, Conf, Level, Rules, Pattern
+    - 360px height scrollable table
+    - Export Alerts CSV button
+
+2.4 PATTERN ANALYSIS TAB
+  Theft Pattern Identification:
+    - Type-1: Sudden Drop (>60% MoM drop) — meter bypass signal
+    - Type-2: Zero Streak (>=5 consecutive zeros) — meter disconnection
+    - Type-3: Night Spike (night/day ratio >0.35) — illegal hookup
+    - Type-4: Gradual Decline (consistent downward) — progressive manipulation
+    - Visual chart showing all 4 pattern archetypes
+
+================================================================================
+MODULE 3: GEOSPATIAL MAP (Bangalore-Wide Intelligence)
+================================================================================
+
+Core Capability:
+Interactive geospatial visualization of consumer anomalies across 8 BESCOM
+zones using PyDeck with CARTO dark-matter basemap.
+
+Sub-Features:
+
+3.1 MAP SETTINGS (Sidebar)
+  - Display Mode: Consumer Pins / Theft Heatmap / Zone Overlay
+  - Show Zones multiselect (all 8 BESCOM zones)
+  - Risk Levels multiselect (HIGH, MEDIUM, LOW)
+  - Dataset Size slider (100-500 consumers, step 50)
+
+3.2 DATA GENERATION
+  - Auto-generated synthetic consumer data on parameter change
+  - Session state caching with parameter key invalidation
+  - Force Refresh Data button
+  - 3-stage theft analysis batch run per consumer
+
+3.3 MAP VISUALIZATION
+  Consumer Pins Mode:
+    - ScatterplotLayer with risk-colored markers
+    - HIGH: RED (alpha 220), MEDIUM: AMBER (alpha 180), LOW: GREEN (alpha 120)
+    - Radius proportional to theft probability
+    - White stroke border
+    - Pickable tooltips: consumer_id, zone, prob_theft
+
+  Theft Heatmap Mode:
+    - HexagonLayer with 3D elevation
+    - Radius: 150m, Elevation scale: 40
+    - 5-color gradient from green to dark red
+    - Extruded 3D view with 45-degree pitch
+
+  Zone Overlay Mode:
+    - Same scatterplot with zone boundary context
+
+  View State:
+    - Center: Bangalore (12.97, 77.59)
+    - Zoom: 10, Pitch: 45 (heatmap) / 0 (pins)
+    - CARTO Dark Matter basemap (no API token required)
+
+3.4 INTELLIGENCE PANELS
+  Metrics Strip (5 columns):
+    - Consumers (filtered count)
+    - Flagged (prob >= 0.5)
+    - HIGH Risk
+    - Zones (unique count)
+    - Avg Risk (mean probability)
+
+  Zone Intelligence Summary Table:
+    - Zone name, consumer count, flagged count, avg risk, zone risk level
+    - Color-coded risk display
+
+  Top 50 Consumer Hotspots Table:
+    - Columns: Consumer, Zone, Feeder, Type, Loss, Risk %, Conf, Lat, Lon
+    - 300px height scrollable
+    - Export CSV button
+
+================================================================================
+MODULE 4: RING DETECTION (Theft Syndicate Network Analysis)
+================================================================================
+
+Core Capability:
+Louvain community detection on consumer-transformer bipartite graphs
+identifies organized theft rings via shared transformer / geohash proximity.
+
+Sub-Features:
+
+4.1 GRAPH SETTINGS (Sidebar)
+  - Min Anomaly Ratio slider (0.0-1.0, step 0.05)
+  - Min Ring Size input (2-20)
+  - Show Member Edges checkbox
+  - Demo Dataset Size slider (50-300 consumers)
+
+4.2 NETWORK SCAN
+  - SCAN NETWORK button
+  - Settings-change auto-detection with session state invalidation
+  - RESCAN NETWORK button for manual refresh
+  - Louvain O(n log n) complexity annotation
+
+4.3 NETWORK GRAPH TAB
+  Interactive Plotly Network Visualization:
+    - Ring centroid nodes (large, 0.95 opacity, white border)
+    - Member nodes (small, 0.35 opacity, same color as parent ring)
+    - Edge lines connecting members to centroids (if enabled)
+    - Inter-ring edges (25% probability)
+    - Risk color coding: HIGH (RED), MEDIUM (AMBER), LOW (GREEN)
+    - Node size proportional to member count
+    - Hover text: Ring ID, Members, Anomaly %, Risk Level
+    - No axes, no grid, dark background
+
+  Top Detected Rings (6 badge cards, 3-column layout):
+    - Risk badge (color-coded)
+    - Ring ID
+    - Member count + Anomaly %
+    - Zone + Severity Score
+    - Status: Stable / Growing (color-coded)
+
+4.4 FORMATION TIMELINE TAB
+  Bubble Scatter Chart:
+    - X-axis: Detection Date
+    - Y-axis: Severity Score
+    - Bubble size: Member count * 2
+    - Color: Risk level (HIGH=red, MEDIUM=amber, LOW=green)
+    - White borders on bubbles
+    - Hover: Ring ID, Formed date, Severity
+
+4.5 RING ROSTER TAB
+  Ring Detail Selector:
+    - Dropdown to select specific ring
+    - 3 metrics: Members, Anomaly Ratio, Severity Score
+    - Zone, Formed (days ago), Status (Stable/Growing, color-coded)
+    - Member table: Consumer ID + Status (FLAGGED/NORMAL)
+
+  Full Ring Roster Table:
+    - Columns: Ring ID, Zone, Members, Anomaly %, Severity, Risk, Growing, Days Ago
+    - Export Ring Data CSV button
+
+================================================================================
+MODULE 5: AUDIT TRAIL (Regulatory Compliance & Logging)
+================================================================================
+
+Core Capability:
+Immutable logging of every AI prediction with queryable audit records,
+analytics dashboards, and regulatory compliance reporting.
+
+Sub-Features:
+
+5.1 QUERY FILTERS (Sidebar)
+  - From Date picker (default: 60 days ago)
+  - To Date picker (default: today)
+  - Alert Type multiselect (theft, technical, billing, normal)
+  - Min Confidence slider (0-100)
+  - Model Version dropdown (All, v1.0, v1.1, v2.0)
+
+5.2 AUDIT LOG TAB
+  Metrics Strip (5 columns):
+    - Total Records (filtered)
+    - Alerts Raised
+    - HIGH Confidence
+    - Period (Days)
+    - Model Versions (unique count)
+
+  Consumer Search:
+    - Text input with partial match search on consumer_id
+
+  Audit Records Table (200 rows max):
+    - Columns: Audit ID, Timestamp, Consumer, Zone, Type, Prob, Conf,
+               Level, Rules, Triggered Rules, Model, Outcome
+    - 420px height scrollable
+    - Export Audit CSV button
+
+5.3 ANALYTICS TAB
+  Daily Alert Volume Chart:
+    - Bar chart (TEAL), resampled daily
+    - 280px height
+
+  Confidence Score Distribution:
+    - Histogram (AMBER, 20 bins)
+    - HIGH threshold line at 80 (green, dashed)
+    - MEDIUM threshold line at 50 (amber, dashed)
+    - 280px height
+
+  Alert Type by Zone:
+    - Stacked bar chart (theft=red, technical=amber, billing=blue)
+    - X-axis zone labels rotated -30 degrees
+    - 320px height
+
+  Model Version Comparison Table:
+    - Columns: Version, Alerts, Avg Confidence, Records
+
+5.4 COMPLIANCE REPORT TAB
+  Regulatory Compliance Summary:
+    - Period range metric
+    - Total Predictions metric
+    - Alert Rate percentage metric
+
+  Audit Requirements Checklist:
+    - Consumer ID logged: PASS
+    - Timestamp recorded (ISO 8601 UTC): PASS
+    - Model version tracked (v1.0, v1.1, v2.0): PASS
+    - Input features logged: PASS
+    - Output label stored: PASS
+    - Confidence score (0-100): PASS
+    - Rule flags (R1-R6): PASS
+    - Audit ID (AUD-XXXXXX): PASS
+    - CSV export: PASS
+
+  Compliance Summary Table:
+    - Metrics: Total Predictions, Alerts Raised, Alert Rate,
+               HIGH Confidence Rate, Avg Confidence, Consumers Analysed,
+               Zones Covered, Model Versions
+    - Export Compliance Report CSV button
+
+  Advisory Note:
+    - Field verification required before consumer action
+    - False positive target: < 3% (Intersection mode)
+    - Model retrain date: 2026-05-05
+
+================================================================================
+MODULE 6: TIME SERIES FORECAST (Custom Dataset Forecasting)
+================================================================================
+
+Core Capability:
+General-purpose time series forecasting using Holt-Winters Exponential
+Smoothing (statsmodels) with 80%/95% confidence bands and full CSV export.
+Optimized for 2500+ rows with cached data loading.
+
+Sub-Features:
+
+6.1 FORECAST SETTINGS (Sidebar)
+  - Forecast Horizon: 7-365 days (step 7)
+  - Data Frequency: Daily (D), Weekly (W), Monthly (MS), Business Daily (B)
+  - Trend Component: Additive / Multiplicative / None
+  - Seasonal Component: Additive / Multiplicative / None
+  - Seasonal Period: 2-365 (default 7, weekly)
+
+6.2 DATA UPLOAD
+  - File uploader: CSV, XLSX, XLS
+  - @st.cache_data on load_file function
+  - Auto-detect date column (date, datetime, timestamp, ds, time, month, week)
+  - Auto-detect first numeric column as target
+  - Manual column selection via dropdowns
+  - Error display for empty files, no numeric columns
+
+6.3 PREPROCESSING (Always visible after upload)
+  - Datetime conversion with coerce (invalid dates dropped with warning)
+  - Numeric coercion for target (missing filled via ffill, bfill, then 0.0)
+  - Duplicate timestamp aggregation by mean
+  - Chronological sort
+  - Minimum 10 data points validation
+
+6.4 DATA PREVIEW TAB (Always visible)
+  Metrics Strip (4 columns):
+    - Total Rows
+    - Date Range
+    - Min Value
+    - Max Value
+  - First 10 rows table with original column names
+
+6.5 STATISTICS TAB (Always visible)
+  - Descriptive statistics: Count, Mean, Std Dev, Min, 25th, Median, 75th, Max
+  - Historical data line chart (Plotly, TEAL, 320px height)
+  - Hover: date + value
+
+6.6 RUN FORECAST BUTTON + SETTINGS DETECTION
+  - Primary button with full width
+  - Live settings summary: Holt-Winters | Horizon | Trend | Seasonal | Period
+  - Settings-change detection via forecast_key
+  - Changing any setting clears previous forecast result
+  - Forecast only runs on explicit button click
+  - Spinner: "Fitting Holt-Winters model..."
+  - Error handling with tips for invalid configurations
+
+6.7 FORECAST RESULTS TAB (Appears after RUN FORECAST)
+  KPI Metrics (5 columns):
+    - MAE (Mean Absolute Error)
+    - RMSE (Root Mean Square Error)
+    - MAPE (Mean Absolute Percentage Error)
+    - Forecast Peak (max value)
+    - Forecast Peak Date
+
+  Interactive Plotly Chart (480px height):
+    - 95% Confidence Interval band (faint green, toself fill)
+    - 80% Confidence Interval band (brighter green, toself fill)
+    - Historical data line (TEAL, solid, width 2)
+    - Model Fit line (BLUE, dotted, opacity 0.6)
+    - Forecast line (AMBER, dashed, width 2.5)
+    - Forecast Start vertical divider (dotted, annotated)
+    - Range slider below x-axis
+    - Hovertemplates for each trace
+
+  Forecast Data Table (expander):
+    - Columns: Date, Forecast, Lower 80%, Upper 80%, Lower 95%, Upper 95%
+    - 280px height scrollable
+
+6.8 EXPORT TAB (Appears after RUN FORECAST)
+  - Download Full Forecast CSV button
+    - Combined historical + forecast data
+    - Historical: Date, Type=Historical, Value, Fitted, empty bounds
+    - Forecast: Date, Type=Forecast, Value, empty Fitted, all bounds
+  - Metrics: Historical Points, Forecast Points
+  - Accuracy Summary Table: MAE, RMSE, MAPE with interpretations
+
+================================================================================
+SHARED UI COMPONENTS & DESIGN SYSTEM
+================================================================================
+
+Design Language:
+  - Government-grade dark theme (#060E1C background)
+  - Ministry of Power branding (gov-tag banner)
+  - Inter + JetBrains Mono typography
+  - Color palette: TEAL (#00D4AA), AMBER (#FFB800), RED (#FF4757),
+    GREEN (#00C48C), BLUE (#4A7FA5)
+
+Navigation:
+  - Sidebar navigation with 6 modules
+  - Active page highlight (teal left border)
+  - VIDYUT branding header in sidebar
+  - System status footer (Engine Online / ML Ready / Weather Live)
+
+Global Components:
+  - inject_css(): Loads custom dark theme CSS
+  - PLOTLY_LAYOUT: Consistent dark chart theme across all modules
+  - Metric cards: #0A1628 background, #0F1F38 border, 6px radius
+  - Alert banners: Yellow/Orange/Red/Trip with pulse animation for critical
+  - Feature cards: Bordered containers with title + description
+  - Tables: Dark headers, hover row highlighting
+  - Buttons: Primary (teal border, dark fill) / Secondary (transparent)
+
+Data Caching:
+  - @st.cache_data for file loading (prevents re-read on every interaction)
+  - @st.cache_resource for ensemble model loading
+  - Session state for forecast results, uploaded data, filter states
+  - Parameter-key invalidation for cache freshness
+
+Error Handling:
+  - try-except around all model execution
+  - Graceful fallbacks to synthetic data when models unavailable
+  - User-friendly error messages with actionable tips
+  - Column validation with specific missing-column reports
+
+================================================================================
+FILE FORMAT REQUIREMENTS
+================================================================================
+
+Demand Forecast CSV:
+  feeder_id, timestamp, demand_kw
+  FEEDER_001, 2026-04-21 00:00:00, 450.50
+
+Theft Alerts CSV:
+  consumer_id, zone, feeder_id, transformer_id, latitude, longitude,
+  consumer_type, day_1, day_2, ..., day_31, label
+
+Time Series CSV:
+  Any date column + any numeric column (auto-detected)
+
+================================================================================
+DEPLOYMENT
+================================================================================
+
+Local:
+  pip install -r requirements.txt
+  pip install -r requirements-ui.txt
+  streamlit run src/dashboard/app.py
+
+Docker:
+  docker build -t vidyut .
+  docker run -p 7860:7860 vidyut
+
+Cloud:
+  Hugging Face Spaces (nitinmal1121212/vidyut-ai)
+  Auto-deploy on git push to main branch
+
+================================================================================
+END OF DOCUMENT
+================================================================================
